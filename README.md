@@ -1,167 +1,82 @@
-# 리듬 노트 생성기
+# EMG Motion Rhythm
 
-업로드한 오디오 파일을 분석해 4레인 리듬게임 노트를 자동으로 생성하는 풀스택 프로토타입입니다. 웹 UI에서 파형과 타임라인을 미리 보고 JSON/CSV로 내보낼 수 있습니다.
+MediaPipe 손 위치 추적과 EMG 근전도 신호를 입력 장치로 활용한 PyQt6 기반 인터랙티브 리듬게임입니다.
 
-## 기능
+## Game Mode
 
-- mp3, wav, ogg 업로드
-- BPM 감지
-- Beat/Onset 추출
-- 난이도 기반 노트 생성
-- 4+ 레인 리듬 노트 차트
-- 파형 미리보기(비트/노트 마커)
-- 노트 타임라인 미리보기
-- JSON/CSV 내보내기
-- 웹 리듬게임 플레이(4키 탭)
-- 점수/콤보/정확도/판정 통계
-- Tap/Accent/Long/Chain 노트 타입
-- long/chain 홀드형 판정(keydown/keyup)
-- 게임 플레이 비주얼(히트 플래시, 판정 배너, 콤보 펄스)
-- PowerShell 스크립트로 백엔드+프론트엔드 동시 실행
+- 손을 좌우로 움직여 3개 레인(LEFT, CENTER, RIGHT)을 선택합니다.
+- 노트가 판정선에 도착할 때 EMG 입력을 발생시킵니다.
+- 손 위치 레인과 노트 레인이 일치하고 EMG 값이 threshold 이상이면 HIT 판정이 발생합니다.
+- 판정은 PERFECT, GOOD, MISS로 구분됩니다.
 
-## 폴더 구조
+## Legacy Web Code
 
-```
-rhythm-note-generator/
-├── backend/
-│   ├── main.py
-│   ├── audio_analyzer.py
-│   ├── note_generator.py
-│   ├── export_utils.py
-│   ├── schemas.py
-│   ├── requirements.txt
-│   ├── uploads/
-│   └── outputs/
-├── frontend/
-│   ├── package.json
-│   ├── index.html
-│   ├── vite.config.js
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx
-│       ├── api.js
-│       ├── styles.css
-│       └── components/
-│           ├── UploadPanel.jsx
-│           ├── AnalysisPanel.jsx
-│           ├── WaveformViewer.jsx
-│           ├── NoteTimeline.jsx
-│           └── ExportPanel.jsx
-├── README.md
-└── run_dev.md
-```
+- 기존 웹 기반 리듬 노트 생성기 코드는 `legacy_web/`에 보존되어 있습니다.
+- 기존 FastAPI 백엔드는 `legacy_web/backend/`에 보존되어 있습니다.
+- 기존 웹 프론트엔드는 `legacy_web/frontend/`에 보존되어 있습니다.
+- 기존 오디오 분석/노트 생성 아이디어는 PyQt6 앱의 `app/audio/` adapter에서 재사용합니다.
 
-## 설치
+## Install
 
-백엔드 의존성: backend/requirements.txt
-
-프론트엔드 의존성: frontend/package.json
-
-## 실행(요약)
-
-Windows PowerShell 명령은 run_dev.md를 참고하세요.
-
-백엔드/프론트엔드를 동시에 실행:
+Python 3.10 또는 3.11을 권장합니다.
 
 ```powershell
-./run_all.ps1
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-## API 목록
+## Run
 
-- GET /
-- POST /api/upload
-- POST /api/analyze
-- POST /api/generate-notes
-- GET /api/export/json/{file_id}
-- GET /api/export/csv/{file_id}
-- GET /api/audio/{file_id}
-
-## 게임 플레이
-
-노트 생성 후 "Play Game"을 클릭하면 4키 리듬게임 플레이 화면이 열립니다.
-
-### 조작(4레인)
-
-- Lane 0: D
-- Lane 1: F
-- Lane 2: J
-- Lane 3: K
-
-### 판정 기준
-
-- Perfect: ±0.050s
-- Great: ±0.100s
-- Good: ±0.150s
-- Miss: > ±0.180s (자동 미스)
-
-노트 타입과 길이에 따라 판정 윈도우가 약간 보정됩니다.
-
-### 점수
-
-- Perfect: 1000
-- Great: 700
-- Good: 400
-- Miss: 0
-
-정확도 계산식:
-
-$$\text{accuracy} = \frac{\text{score}}{\text{notes} \times 1000} \times 100$$
-
-### 게임 흐름
-
-1. 오디오 업로드
-2. 분석(Analyze)
-3. 노트 생성(Generate Notes)
-4. 타임라인 미리보기
-5. Play Game
-6. Start
-7. D/F/J/K로 플레이
-8. 결과 확인
-
-## 차트 JSON 포맷
-
-```json
-{
-  "version": "0.1.0",
-  "file_id": "abc123",
-  "title": "sample",
-  "bpm": 128.0,
-  "offset": 0.0,
-  "difficulty": "normal",
-  "lanes": 4,
-  "duration": 180.5,
-  "notes": [
-    {
-      "time": 1.245,
-      "lane": 2,
-      "type": "tap",
-      "length": 0.0
-    }
-  ]
-}
+```powershell
+python app/main.py
 ```
 
-노트 타입:
+또는 Windows에서:
 
- - `tap`: 기본 단타
- - `accent`: 강조 단타
- - `long`: 길게 유지하는 노트(hold-like)
- - `chain`: 짧은 연결형 롱 노트
+```powershell
+run.bat
+```
 
-## 한계점
+## Mock EMG Test
 
-- 분석 정확도는 오디오 품질에 영향을 받습니다.
-- 차트는 간단한 휴리스틱과 패턴으로 생성됩니다.
-- 차트는 메모리에 저장되어 서버 재시작 시 사라집니다.
-- long/chain은 홀드형이지만 틱 점수 등 완전한 홀드 채점은 아직 없습니다.
-- 자동 채보는 초안 수준입니다.
-- 수동 노트 편집은 지원하지 않습니다.
-- 브라우저 오디오 지연으로 오프셋 보정이 필요할 수 있습니다.
+- 웹캠 앞에서 손을 좌우로 움직입니다.
+- SPACE 키를 누르면 EMG 입력이 활성화됩니다.
+- 실제 EMG 센서 없이도 게임 판정이 가능합니다.
+- 카메라가 없을 때는 A/S/D 또는 Left/Down/Right 키로 레인을 선택할 수 있습니다.
 
-## 향후 개선
+## Saved Music
 
-- Hold note 지원
-- 섹션/다운비트 감지
-- 수동 노트 편집
-- Unity/Godot 및 osu!mania 포맷 내보내기
+- Start 화면의 Add Song으로 mp3, wav, ogg 파일을 추가하면 `app/data/songs/`에 저장됩니다.
+- Saved Music 목록에서 저장된 음악을 선택하고 Load Selected를 누르면 해당 음악으로 게임을 시작할 수 있습니다.
+- Generate Notes를 누르면 `app/data/notes/{song_name}_notes.json` 형식으로 노트가 저장됩니다.
+- 저장된 노트가 있는 음악은 다음에 Load Selected를 눌렀을 때 자동으로 해당 노트를 불러옵니다.
+- 저장된 음악 파일은 `.gitignore`에 의해 git 추적에서 제외됩니다.
+
+## Settings
+
+- Start 화면의 Settings에서 게임 화면 왼쪽 위 HUD 표시를 켜거나 끌 수 있습니다.
+- Settings에서 음악 음량을 조절할 수 있습니다.
+- Settings에서 판정 텍스트, 카메라 디버그, 카메라 반전, 노트 속도, 판정선 위치, EMG threshold를 조절할 수 있습니다.
+- 점수와 콤보는 HUD 표시 여부와 관계없이 게임 화면에 항상 표시됩니다.
+- 설정은 `app/data/settings.json`에 저장되며 git 추적에서 제외됩니다.
+
+## Real EMG Input
+
+- `app/input/emg_reader.py`의 `SerialEMGReader`에서 COM 포트와 baudrate를 수정합니다.
+- 기본 예시는 `COM3`, `115200`입니다.
+- 한 줄에 숫자 하나가 들어오는 serial 데이터 형식을 기본으로 사용합니다.
+
+예:
+
+```text
+523
+610
+230
+```
+
+## Notes
+
+- 카메라가 없어도 앱이 죽지 않게 fallback 처리되어 있습니다.
+- EMG 센서가 없어도 mock 모드로 실행할 수 있습니다.
+- MediaPipe가 설치되지 않았거나 초기화에 실패하면 콘솔에 명확한 메시지를 출력하고 앱은 계속 실행됩니다.

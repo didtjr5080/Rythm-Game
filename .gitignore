@@ -1,23 +1,24 @@
-
-# Python virtual environments
 .venv/
 venv/
 env/
-ENV/
-backend/.venv/
-**/.venv/
-
-# Python cache
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
 *.pyd
-
-# Node
 node_modules/
-
-# Logs / temp / generated
+dist/
+build/
 *.log
+app/data/sessions/
+app/data/results/
+app/data/settings.json
+app/data/notes/
+app/data/songs/*
+!app/data/songs/.gitkeep
+legacy_web/frontend/node_modules/
+.DS_Store
+backend/.venv/
+**/.venv/
 tmp/
 temp/
 uploads/
