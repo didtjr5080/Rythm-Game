@@ -1,31 +1,31 @@
-Serial EMG Reader
+시리얼 EMG 리더
 
-Purpose
+목적
 
-Explain the serial EMG reader behavior and fallback logic.
+시리얼 EMG 리더의 동작과 폴백 로직을 설명한다.
 
-Confirmed Facts
+확인된 사실
 
-EXTRACTED: SerialEMGReader defaults to COM3 with baudrate 9600.
-EXTRACTED: The reader attempts to open a pyserial Serial connection with a short timeout.
-EXTRACTED: If pyserial is missing or the port fails, it falls back to MockEMGReader.
-EXTRACTED: Incoming lines are parsed for a numeric value, including formats like filtered: 123.
-EXTRACTED: The reader returns a numeric value and an activation flag based on threshold.
+EXTRACTED: SerialEMGReader의 기본값은 COM3, baudrate 9600이다.
+EXTRACTED: 리더는 짧은 타임아웃으로 pyserial Serial 연결을 시도한다.
+EXTRACTED: pyserial이 없거나 포트가 실패하면 MockEMGReader로 폴백한다.
+EXTRACTED: 입력 라인은 filtered: 123 같은 형식을 포함해 숫자 값을 파싱한다.
+EXTRACTED: 리더는 숫자 값과 임계값 기반 활성화 플래그를 반환한다.
 
-Related Files
+관련 파일
 
 [app/input/emg_reader.py](app/input/emg_reader.py)
 [app/input/mock_emg_reader.py](app/input/mock_emg_reader.py)
 
-Flow
+흐름
 
-Open serial -> Read line -> Extract numeric value -> Compare to threshold -> Activation
-If serial fails -> Use mock reader
+시리얼 열기 -> 라인 읽기 -> 숫자 추출 -> 임계값 비교 -> 활성화
+시리얼 실패 -> 모의 리더 사용
 
-Notes
+비고
 
-The README suggests a different baudrate for real sensors; see contradictions.
+README는 실제 센서에 대해 다른 baudrate를 제안한다. contradictions를 참고한다.
 
 TODO
 
-Confirm the intended default baudrate for the production EMG device.
+운영용 EMG 디바이스의 기본 baudrate를 확인한다.

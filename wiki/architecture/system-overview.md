@@ -1,23 +1,23 @@
-System Overview
+시스템 개요
 
-Purpose
+목적
 
-Explain the top-level structure of the PyQt6 rhythm game and how major subsystems connect.
+PyQt6 리듬 게임의 상위 구조와 주요 서브시스템 연결을 설명한다.
 
-Confirmed Facts
+확인된 사실
 
-EXTRACTED: The application is launched via a PyQt6 entry point in app/main.py.
-EXTRACTED: MainWindow switches between Start, Settings, Calibration, Game, and Result screens.
-EXTRACTED: MediaPipe-based hand tracking is used for lane selection when the camera is enabled.
-EXTRACTED: EMG input uses SerialEMGReader with a mock fallback when serial input is unavailable.
-EXTRACTED: Keyboard lane fallback uses A/S/D or Left/Down/Right and SPACE for mock EMG.
-EXTRACTED: Songs and notes are stored under app/data/songs/ and app/data/notes/.
-EXTRACTED: Settings are stored in app/data/settings.json.
-EXTRACTED: Gameplay sessions are logged to JSON and CSV in app/data/sessions/.
-EXTRACTED: Result summaries are saved as JSON files in app/data/results/.
-EXTRACTED: legacy_web/ is preserved and audio/note adapters reference the legacy backend modules.
+EXTRACTED: 애플리케이션은 app/main.py의 PyQt6 엔트리 포인트로 실행된다.
+EXTRACTED: MainWindow는 Start, Settings, Calibration, Game, Result 화면을 전환한다.
+EXTRACTED: 카메라가 활성화되면 MediaPipe 기반 손 추적으로 레인을 선택한다.
+EXTRACTED: EMG 입력은 SerialEMGReader를 사용하며 시리얼 입력이 없으면 모의 입력으로 폴백한다.
+EXTRACTED: 키보드 레인 폴백은 A/S/D 또는 Left/Down/Right를 사용하며, SPACE로 모의 EMG를 사용한다.
+EXTRACTED: 음악과 노트는 app/data/songs/ 및 app/data/notes/에 저장된다.
+EXTRACTED: 설정은 app/data/settings.json에 저장된다.
+EXTRACTED: 게임 세션은 app/data/sessions/에 JSON과 CSV로 기록된다.
+EXTRACTED: 결과 요약은 app/data/results/에 JSON 파일로 저장된다.
+EXTRACTED: legacy_web/는 보존되어 있으며 오디오/노트 어댑터가 legacy backend 모듈을 참조한다.
 
-Related Files
+관련 파일
 
 [app/main.py](app/main.py)
 [app/ui/main_window.py](app/ui/main_window.py)
@@ -34,15 +34,15 @@ Related Files
 [app/settings.py](app/settings.py)
 [README.md](README.md)
 
-Flow
+흐름
 
-Launch app -> StartScreen -> Select or add song -> Generate or load notes -> GameWidget
-GameWidget -> InputFusion (camera + EMG) -> RhythmGameEngine -> Judge -> Score -> ResultScreen
+앱 실행 -> StartScreen -> 노래 선택 또는 추가 -> 노트 생성 또는 로드 -> GameWidget
+GameWidget -> InputFusion (카메라 + EMG) -> RhythmGameEngine -> Judge -> Score -> ResultScreen
 
-Notes
+비고
 
-The game continues even when camera or serial input is unavailable, using fallback inputs.
+카메라나 시리얼 입력이 없어도 폴백 입력으로 게임이 계속 진행된다.
 
 TODO
 
-Validate any optional calibration flow details in CalibrationScreen.
+CalibrationScreen의 선택적 보정 흐름 세부 사항을 확인한다.

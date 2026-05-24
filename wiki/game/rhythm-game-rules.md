@@ -1,30 +1,30 @@
-Rhythm Game Rules
+리듬 게임 규칙
 
-Purpose
+목적
 
-Summarize core gameplay rules for lanes, notes, and hits.
+레인, 노트, 타격에 대한 핵심 게임 규칙을 요약한다.
 
-Confirmed Facts
+확인된 사실
 
-EXTRACTED: The game uses 3 lanes (LEFT, CENTER, RIGHT).
-EXTRACTED: Notes are judged when they reach the judgement line timing window.
-EXTRACTED: A hit requires EMG activation and the selected lane matching the note lane.
-EXTRACTED: Score and combo are shown during gameplay.
+EXTRACTED: 게임은 3개 레인(LEFT, CENTER, RIGHT)을 사용한다.
+EXTRACTED: 노트는 판정선 타이밍 창에 도달했을 때 판정된다.
+EXTRACTED: 타격은 EMG 활성화와 선택 레인이 노트 레인과 일치해야 한다.
+EXTRACTED: 점수와 콤보는 게임 중 표시된다.
 
-Related Files
+관련 파일
 
 [app/config.py](app/config.py)
 [app/game/judge.py](app/game/judge.py)
 [app/ui/game_widget.py](app/ui/game_widget.py)
 
-Flow
+흐름
 
-Note spawns -> Moves toward judgement line -> EMG + lane match -> Result -> Score update
+노트 생성 -> 판정선으로 이동 -> EMG + 레인 일치 -> 결과 -> 점수 업데이트
 
-Notes
+비고
 
-The judgement line position is configurable in settings.
+판정선 위치는 설정에서 조정 가능하다.
 
 TODO
 
-Confirm whether any additional rule variants exist for difficulty modes.
+난이도 모드에 따른 추가 규칙이 있는지 확인한다.

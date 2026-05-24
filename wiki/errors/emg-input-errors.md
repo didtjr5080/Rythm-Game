@@ -1,30 +1,30 @@
-EMG Input Errors
+EMG 입력 오류
 
-Purpose
+목적
 
-List EMG-related error conditions and fallbacks.
+EMG 관련 오류 조건과 폴백을 정리한다.
 
-Confirmed Facts
+확인된 사실
 
-EXTRACTED: Missing pyserial triggers a fallback to MockEMGReader.
-EXTRACTED: Serial port open failures trigger a fallback to MockEMGReader.
-EXTRACTED: Serial read errors log a message and return a mock value for the frame.
-INFERRED: COM port mismatch or baudrate mismatch prevents real EMG readings.
-INFERRED: Malformed serial data can be ignored if no numeric values are parsed.
+EXTRACTED: pyserial이 없으면 MockEMGReader로 폴백한다.
+EXTRACTED: 시리얼 포트 열기 실패 시 MockEMGReader로 폴백한다.
+EXTRACTED: 시리얼 읽기 오류는 메시지를 출력하고 해당 프레임에 모의 값을 반환한다.
+INFERRED: COM 포트 또는 baudrate 불일치는 실제 EMG 읽기를 막는다.
+INFERRED: 숫자 값이 파싱되지 않으면 잘못된 시리얼 데이터는 무시될 수 있다.
 
-Related Files
+관련 파일
 
 [app/input/emg_reader.py](app/input/emg_reader.py)
 [app/input/mock_emg_reader.py](app/input/mock_emg_reader.py)
 
-Flow
+흐름
 
-Open port -> Read line -> Parse value -> Activation -> Fallback on error
+포트 열기 -> 라인 읽기 -> 값 파싱 -> 활성화 -> 오류 시 폴백
 
-Notes
+비고
 
-Mock EMG ensures the game remains playable when hardware is absent.
+모의 EMG는 하드웨어가 없을 때도 게임을 플레이 가능하게 한다.
 
 TODO
 
-Confirm if UI exposes any realtime EMG connection status.
+UI에 실시간 EMG 연결 상태가 표시되는지 확인한다.

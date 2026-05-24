@@ -1,63 +1,63 @@
-Rythm-Game Wiki
+Rythm-Game 위키
 
-This wiki documents the existing EMG Motion Rhythm project.
+이 위키는 기존 EMG Motion Rhythm 프로젝트를 문서화합니다.
 
-The purpose of this wiki is to explain the current project structure, input flow, game loop, audio/note flow, and visualization resources without changing the implemented game.
+이 위키의 목적은 구현된 게임을 변경하지 않고 현재 프로젝트 구조, 입력 흐름, 게임 루프, 오디오/노트 흐름, 시각화 리소스를 설명하는 것입니다.
 
-Architecture
+아키텍처
 
-System Overview
-Data Flow
+시스템 개요
+데이터 흐름
 
-Input
+입력
 
-Input Overview
-Mock Input
+입력 개요
+모의 입력
 
 EMG
 
-Serial EMG Reader
-EMG Threshold
+시리얼 EMG 리더
+EMG 임계값
 
-Hand Tracking
+손 추적
 
-MediaPipe Hand Tracking
-Camera Fallback
+MediaPipe 손 추적
+카메라 폴백
 
-Game
+게임
 
-Rhythm Game Rules
-Judgement System
-Settings System
+리듬 게임 규칙
+판정 시스템
+설정 시스템
 
-Audio
+오디오
 
-Audio Note Generation
-Saved Music Flow
+오디오 노트 생성
+저장된 음악 흐름
 
-Data
+데이터
 
-Local Data Layout
+로컬 데이터 레이아웃
 
-Errors
+오류
 
-Runtime Errors
-EMG Input Errors
-Camera and MediaPipe Errors
+런타임 오류
+EMG 입력 오류
+카메라 및 MediaPipe 오류
 
-Decisions
+결정 사항
 
-Architecture Decisions
+아키텍처 결정 사항
 
-Contradictions
+모순점
 
-Contradictions and Ambiguities
+모순점 및 애매한 내용
 
-Diagrams
+다이어그램
 
-System Overview Diagram
-Data Flow Diagram
-Input Flow Diagram
-Game Loop Diagram
-File Structure Diagram
-Graphify Report
+시스템 개요 다이어그램
+데이터 흐름 다이어그램
+입력 흐름 다이어그램
+게임 루프 다이어그램
+파일 구조 다이어그램
+Graphify 리포트

@@ -1,24 +1,24 @@
-Data Flow
+데이터 흐름
 
-Purpose
+목적
 
-Describe the path from music files to notes and gameplay results.
+음악 파일에서 노트와 게임 결과까지의 경로를 설명한다.
 
-Confirmed Facts
+확인된 사실
 
-EXTRACTED: Added songs are stored under app/data/songs/.
-EXTRACTED: Generated notes are saved under app/data/notes/ with a _notes.json suffix.
-EXTRACTED: Saved notes are loaded automatically when a selected song already has notes.
-EXTRACTED: Game updates evaluate lane selection and EMG activation for judgement.
+EXTRACTED: 추가된 음악은 app/data/songs/에 저장된다.
+EXTRACTED: 생성된 노트는 app/data/notes/에 _notes.json 접미사로 저장된다.
+EXTRACTED: 선택한 곡에 저장된 노트가 있으면 자동으로 로드된다.
+EXTRACTED: 게임 업데이트에서 레인 선택과 EMG 활성화를 판정에 사용한다.
 
-Related Files
+관련 파일
 
 [app/ui/start_screen.py](app/ui/start_screen.py)
 [app/audio/note_generator_adapter.py](app/audio/note_generator_adapter.py)
 [app/game/rhythm_game_engine.py](app/game/rhythm_game_engine.py)
 [app/game/judge.py](app/game/judge.py)
 
-Flow
+흐름
 
 Music File
 -> app/data/songs/
@@ -33,10 +33,10 @@ Music File
 -> Session Log (app/data/sessions/)
 -> Result Summary (app/data/results/)
 
-Notes
+비고
 
-Notes are normalized and simplified before gameplay to reduce dense hit windows.
+노트는 과밀한 타격 창을 줄이기 위해 게임 전에 정규화 및 단순화된다.
 
 TODO
 
-Confirm any additional data flow for session logs and results output.
+세션 로그와 결과 출력에 대한 추가 데이터 흐름이 있는지 확인한다.

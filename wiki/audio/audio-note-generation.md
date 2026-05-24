@@ -1,19 +1,19 @@
-Audio Note Generation
+오디오 노트 생성
 
-Purpose
+목적
 
-Explain how audio analysis and note generation are handled.
+오디오 분석과 노트 생성이 처리되는 방식을 설명한다.
 
-Confirmed Facts
+확인된 사실
 
-EXTRACTED: Audio analysis calls legacy backend functions when available.
-EXTRACTED: Note generation attempts to use legacy backend note_generator first.
-EXTRACTED: If legacy generation fails, sample notes are used as a fallback.
-EXTRACTED: Notes are simplified to reduce dense hit intervals.
-EXTRACTED: legacy_web frontend calls backend endpoints for upload, analyze, and generate-notes.
-EXTRACTED: legacy_web backend builds chart data and exports JSON/CSV for generated notes.
+EXTRACTED: 오디오 분석은 가능할 때 legacy backend 함수를 호출한다.
+EXTRACTED: 노트 생성은 legacy backend의 note_generator를 우선 시도한다.
+EXTRACTED: legacy 생성이 실패하면 샘플 노트로 폴백한다.
+EXTRACTED: 노트는 과밀한 타격 간격을 줄이기 위해 단순화된다.
+EXTRACTED: legacy_web 프론트엔드는 업로드, 분석, 노트 생성 엔드포인트를 호출한다.
+EXTRACTED: legacy_web 백엔드는 차트 데이터를 구성하고 JSON/CSV를 내보낸다.
 
-Related Files
+관련 파일
 
 [app/audio/beat_analyzer.py](app/audio/beat_analyzer.py)
 [app/audio/note_generator_adapter.py](app/audio/note_generator_adapter.py)
@@ -21,14 +21,14 @@ Related Files
 [legacy_web/frontend/src/api.js](legacy_web/frontend/src/api.js)
 [legacy_web/backend/main.py](legacy_web/backend/main.py)
 
-Flow
+흐름
 
-Analyze audio -> Generate chart -> Convert to lanes -> Simplify -> Save JSON
+오디오 분석 -> 차트 생성 -> 레인 변환 -> 단순화 -> JSON 저장
 
-Notes
+비고
 
-The adapter imports legacy_web/backend modules via sys.path adjustments.
+어댑터는 sys.path 조정으로 legacy_web/backend 모듈을 임포트한다.
 
 TODO
 
-Confirm which legacy backend functions are required for full note generation.
+전체 노트 생성을 위해 필요한 legacy backend 함수 범위를 확인한다.

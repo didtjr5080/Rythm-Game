@@ -1,28 +1,28 @@
-Settings System
+설정 시스템
 
-Purpose
+목적
 
-Describe configurable gameplay and UI options stored in local settings.
+로컬 설정에 저장되는 게임 및 UI 옵션을 설명한다.
 
-Confirmed Facts
+확인된 사실
 
-EXTRACTED: Settings are loaded from app/data/settings.json with defaults in app/settings.py.
-EXTRACTED: Options include HUD visibility, music volume, judgement text, camera debug, camera flip, note speed, judgement line position, and EMG threshold.
-EXTRACTED: Window mode and resolution are stored in settings.
+EXTRACTED: 설정은 app/data/settings.json에서 로드되며 기본값은 app/settings.py에 있다.
+EXTRACTED: 옵션에는 HUD 표시, 음악 음량, 판정 텍스트, 카메라 디버그, 카메라 플립, 노트 속도, 판정선 위치, EMG 임계값이 포함된다.
+EXTRACTED: 창 모드와 해상도도 설정에 저장된다.
 
-Related Files
+관련 파일
 
 [app/settings.py](app/settings.py)
 [README.md](README.md)
 
-Flow
+흐름
 
-Load settings -> Apply to UI and gameplay -> Save updates to app/data/settings.json
+설정 로드 -> UI와 게임에 적용 -> app/data/settings.json에 저장
 
-Notes
+비고
 
-Settings values are clamped to safe ranges when loaded and saved.
+설정 값은 로드/저장 시 안전한 범위로 클램프된다.
 
 TODO
 
-Confirm where settings UI writes updates in the SettingsScreen.
+SettingsScreen에서 설정 업데이트가 저장되는 위치를 확인한다.
