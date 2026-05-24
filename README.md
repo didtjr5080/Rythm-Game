@@ -80,3 +80,36 @@ run.bat
 - 카메라가 없어도 앱이 죽지 않게 fallback 처리되어 있습니다.
 - EMG 센서가 없어도 mock 모드로 실행할 수 있습니다.
 - MediaPipe가 설치되지 않았거나 초기화에 실패하면 콘솔에 명확한 메시지를 출력하고 앱은 계속 실행됩니다.
+
+## Knowledge Wiki and Structure Visualization
+
+This repository includes documentation-only resources for understanding the existing EMG Motion Rhythm game.
+
+Folders
+
+wiki/: persistent project wiki
+docs/: documentation for Graphify and visualization
+diagrams/: Mermaid structure diagrams
+graphify-out/: generated Graphify output
+
+Important Rule
+
+These files are for documentation and visualization only.
+
+They must not change the existing game behavior.
+
+Start Reading
+
+wiki/index.md
+diagrams/system-overview.md
+diagrams/data-flow.md
+docs/graphify.md
+
+Generate Structure Graph
+
+pip install graphifyy
+graphify .
+
+Check available commands:
+
+graphify --help

@@ -1,0 +1,47 @@
+# Python
+
+.venv/
+venv/
+env/
+pycache/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Runtime data
+
+app/data/songs/
+app/data/notes/
+app/data/settings.json
+
+# Legacy web dependencies / build outputs
+
+legacy_web/frontend/node_modules/
+legacy_web/frontend/dist/
+legacy_web/frontend/build/
+legacy_web/backend/.venv/
+legacy_web/backend/venv/
+legacy_web/backend/pycache/
+
+# Logs
+
+*.log
+
+# Large media / private data
+
+raw/videos/
+raw/session-samples/
+*.mp4
+*.avi
+*.mov
+*.wav
+*.mp3
+*.ogg
+
+# Secrets
+
+.env
+*.env
+serviceAccountKey.json
+google-services.json
+*.key

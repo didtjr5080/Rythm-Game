@@ -1,0 +1,422 @@
+{
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\run_all.ps1": {
+    "mtime": 1779611528.4635863,
+    "ast_hash": "efd8a35a58bb4c6807be243f01cd2a90",
+    "semantic_hash": "efd8a35a58bb4c6807be243f01cd2a90"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\config.py": {
+    "mtime": 1779042319.401209,
+    "ast_hash": "b0d09ba9889d3464320cc4deee470468",
+    "semantic_hash": "b0d09ba9889d3464320cc4deee470468"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\i18n.py": {
+    "mtime": 1779044247.364938,
+    "ast_hash": "e0b88163fda6321faacd31ae9738b791",
+    "semantic_hash": "e0b88163fda6321faacd31ae9738b791"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\main.py": {
+    "mtime": 1779041440.7769058,
+    "ast_hash": "c23a8102006aeabb45232757e4a06b03",
+    "semantic_hash": "c23a8102006aeabb45232757e4a06b03"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\settings.py": {
+    "mtime": 1779044175.9315703,
+    "ast_hash": "e258d8025a84d61ddf3e038a191538b9",
+    "semantic_hash": "e258d8025a84d61ddf3e038a191538b9"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\__init__.py": {
+    "mtime": 1779038657.3039472,
+    "ast_hash": "68b329da9893e34099c7d8ad5cb9c940",
+    "semantic_hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\analytics\\game_metrics.py": {
+    "mtime": 1779038696.4268322,
+    "ast_hash": "c1c577e9af3089fb6d46b7687bb9a885",
+    "semantic_hash": "c1c577e9af3089fb6d46b7687bb9a885"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\analytics\\session_logger.py": {
+    "mtime": 1779040498.400942,
+    "ast_hash": "c1d30cbca3846f5251e437ff8b09550e",
+    "semantic_hash": "c1d30cbca3846f5251e437ff8b09550e"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\analytics\\__init__.py": {
+    "mtime": 1779038659.40364,
+    "ast_hash": "68b329da9893e34099c7d8ad5cb9c940",
+    "semantic_hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\audio\\audio_player.py": {
+    "mtime": 1779042362.180189,
+    "ast_hash": "6d9623ce298ce27742a87594bc55b839",
+    "semantic_hash": "6d9623ce298ce27742a87594bc55b839"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\audio\\beat_analyzer.py": {
+    "mtime": 1779038695.7399955,
+    "ast_hash": "6473b32aaaca68caab70ada3bd68c270",
+    "semantic_hash": "6473b32aaaca68caab70ada3bd68c270"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\audio\\note_generator_adapter.py": {
+    "mtime": 1779042319.6110072,
+    "ast_hash": "6077b304bea0434980a07eeaba7212ba",
+    "semantic_hash": "6077b304bea0434980a07eeaba7212ba"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\audio\\__init__.py": {
+    "mtime": 1779038658.6892648,
+    "ast_hash": "68b329da9893e34099c7d8ad5cb9c940",
+    "semantic_hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\results\\result_20260518_022807.json": {
+    "mtime": 1779038887.3183746,
+    "ast_hash": "0f719114f86809fc927885b7bae2a992",
+    "semantic_hash": "0f719114f86809fc927885b7bae2a992"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\results\\result_20260518_022822.json": {
+    "mtime": 1779038902.398785,
+    "ast_hash": "0f719114f86809fc927885b7bae2a992",
+    "semantic_hash": "0f719114f86809fc927885b7bae2a992"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\results\\result_20260518_024935.json": {
+    "mtime": 1779040175.891516,
+    "ast_hash": "9f2636ae9a0f7798f4a70f26ead5299e",
+    "semantic_hash": "9f2636ae9a0f7798f4a70f26ead5299e"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\results\\result_20260518_030913.json": {
+    "mtime": 1779041353.1697116,
+    "ast_hash": "f9d39e0ef9f93418165ce665c19ac9a4",
+    "semantic_hash": "f9d39e0ef9f93418165ce665c19ac9a4"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\results\\result_20260518_031349.json": {
+    "mtime": 1779041629.446585,
+    "ast_hash": "99cfb7d164a09d5364af6597827d4082",
+    "semantic_hash": "99cfb7d164a09d5364af6597827d4082"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\results\\result_20260518_032751.json": {
+    "mtime": 1779042471.7553778,
+    "ast_hash": "3af64746ce852457664d681512cfeaeb",
+    "semantic_hash": "3af64746ce852457664d681512cfeaeb"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\results\\result_20260518_034909.json": {
+    "mtime": 1779043749.771241,
+    "ast_hash": "8d939fe69643673c24d40a04a94f59f6",
+    "semantic_hash": "8d939fe69643673c24d40a04a94f59f6"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\sessions\\session_20260518_022757.json": {
+    "mtime": 1779038877.9223707,
+    "ast_hash": "33c5e1ad4a41685dc5a31fbb1ae7918e",
+    "semantic_hash": "33c5e1ad4a41685dc5a31fbb1ae7918e"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\sessions\\session_20260518_024925.json": {
+    "mtime": 1779040175.8874588,
+    "ast_hash": "3440f0405dd2bfba7cbef4c05ab21599",
+    "semantic_hash": "3440f0405dd2bfba7cbef4c05ab21599"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\sessions\\session_20260518_030716.json": {
+    "mtime": 1779041353.145291,
+    "ast_hash": "12c61ec437aecf00e5ebe605ca586f0c",
+    "semantic_hash": "12c61ec437aecf00e5ebe605ca586f0c"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\sessions\\session_20260518_031339.json": {
+    "mtime": 1779041629.4455836,
+    "ast_hash": "8c0ffbb02f911bb43b688b467650df9e",
+    "semantic_hash": "8c0ffbb02f911bb43b688b467650df9e"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\sessions\\session_20260518_032738.json": {
+    "mtime": 1779042471.7413692,
+    "ast_hash": "fa0339786281aad1cb979f656f5f4b2c",
+    "semantic_hash": "fa0339786281aad1cb979f656f5f4b2c"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\data\\sessions\\session_20260518_034538.json": {
+    "mtime": 1779043749.735402,
+    "ast_hash": "68d15e50343962d756114665f54b4801",
+    "semantic_hash": "68d15e50343962d756114665f54b4801"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\game\\judge.py": {
+    "mtime": 1779038660.2718809,
+    "ast_hash": "285054b94e208c0c6899ddb2e81b2021",
+    "semantic_hash": "285054b94e208c0c6899ddb2e81b2021"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\game\\note.py": {
+    "mtime": 1779038660.0379047,
+    "ast_hash": "e001e1ce70c3ef9baae1dc8f35a80473",
+    "semantic_hash": "e001e1ce70c3ef9baae1dc8f35a80473"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\game\\rhythm_game_engine.py": {
+    "mtime": 1779042698.0613115,
+    "ast_hash": "fac306788b2b75b70c9ea64040edeec2",
+    "semantic_hash": "fac306788b2b75b70c9ea64040edeec2"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\game\\score.py": {
+    "mtime": 1779038660.881858,
+    "ast_hash": "178e87e133b5beaf5544af732384a324",
+    "semantic_hash": "178e87e133b5beaf5544af732384a324"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\game\\__init__.py": {
+    "mtime": 1779038658.2550437,
+    "ast_hash": "68b329da9893e34099c7d8ad5cb9c940",
+    "semantic_hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\input\\emg_reader.py": {
+    "mtime": 1779611528.4635863,
+    "ast_hash": "cd22cafa7b9bfeb4f2b61d1e11ece11c",
+    "semantic_hash": "cd22cafa7b9bfeb4f2b61d1e11ece11c"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\input\\input_fusion.py": {
+    "mtime": 1779042697.8485053,
+    "ast_hash": "9a4f7da76fac5b542b079b0dab25e407",
+    "semantic_hash": "9a4f7da76fac5b542b079b0dab25e407"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\input\\mediapipe_tracker.py": {
+    "mtime": 1779041171.8314643,
+    "ast_hash": "906e0c8e64633c064fbc7bc16de895cf",
+    "semantic_hash": "906e0c8e64633c064fbc7bc16de895cf"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\input\\mock_emg_reader.py": {
+    "mtime": 1779042697.6411054,
+    "ast_hash": "95d466e62582a119f3b2ebb723ee17e6",
+    "semantic_hash": "95d466e62582a119f3b2ebb723ee17e6"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\input\\__init__.py": {
+    "mtime": 1779038659.0837817,
+    "ast_hash": "68b329da9893e34099c7d8ad5cb9c940",
+    "semantic_hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\calibration_screen.py": {
+    "mtime": 1779041513.254884,
+    "ast_hash": "234bf0af41915932496fba606b36b168",
+    "semantic_hash": "234bf0af41915932496fba606b36b168"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\game_widget.py": {
+    "mtime": 1779043113.331377,
+    "ast_hash": "0aa7d3c632232b97edfa69c528d57b06",
+    "semantic_hash": "0aa7d3c632232b97edfa69c528d57b06"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\main_window.py": {
+    "mtime": 1779044246.8437827,
+    "ast_hash": "94697cad868729c2fbc795fb03278df1",
+    "semantic_hash": "94697cad868729c2fbc795fb03278df1"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\results_browser_screen.py": {
+    "mtime": 1779044246.6179674,
+    "ast_hash": "e52dafd3503355809a54ecc222a09be6",
+    "semantic_hash": "e52dafd3503355809a54ecc222a09be6"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\result_screen.py": {
+    "mtime": 1779041513.7832794,
+    "ast_hash": "c0f33faa79c770701210bf6fee95ae52",
+    "semantic_hash": "c0f33faa79c770701210bf6fee95ae52"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\settings_screen.py": {
+    "mtime": 1779044063.181903,
+    "ast_hash": "1d3014bba4e83daaaca8740a58b2204d",
+    "semantic_hash": "1d3014bba4e83daaaca8740a58b2204d"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\start_screen.py": {
+    "mtime": 1779044247.0640855,
+    "ast_hash": "0da7d2fadc24b9dd5a6ed8c8d2b0349f",
+    "semantic_hash": "0da7d2fadc24b9dd5a6ed8c8d2b0349f"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\theme.py": {
+    "mtime": 1779043403.7396796,
+    "ast_hash": "45b0339b63c2bfdc4ae3e068ddc5850f",
+    "semantic_hash": "45b0339b63c2bfdc4ae3e068ddc5850f"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\app\\ui\\__init__.py": {
+    "mtime": 1779038658.0025928,
+    "ast_hash": "68b329da9893e34099c7d8ad5cb9c940",
+    "semantic_hash": "68b329da9893e34099c7d8ad5cb9c940"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\audio_analyzer.py": {
+    "mtime": 1779030599.785961,
+    "ast_hash": "f9d5fbc7e9c2dd4e2a239717fddf7f82",
+    "semantic_hash": "f9d5fbc7e9c2dd4e2a239717fddf7f82"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\export_utils.py": {
+    "mtime": 1779031136.003729,
+    "ast_hash": "62398044396310f78dc41cb40d4430ac",
+    "semantic_hash": "62398044396310f78dc41cb40d4430ac"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\main.py": {
+    "mtime": 1779031184.0877378,
+    "ast_hash": "4a5f2b07e2f4a4073cd1630862d1b228",
+    "semantic_hash": "4a5f2b07e2f4a4073cd1630862d1b228"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\note_generator.py": {
+    "mtime": 1779030574.3604274,
+    "ast_hash": "72d32db7430fcb7813aa7db14a2dffac",
+    "semantic_hash": "72d32db7430fcb7813aa7db14a2dffac"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\schemas.py": {
+    "mtime": 1779027902.1802948,
+    "ast_hash": "7370dc323f6507efb0418a6d3eeccfcc",
+    "semantic_hash": "7370dc323f6507efb0418a6d3eeccfcc"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\0869fae4a57d457bac3d9de19e505cd5_chart.json": {
+    "mtime": 1779030060.1612382,
+    "ast_hash": "d7d3fdd5439f131fa631b58c30b1a44f",
+    "semantic_hash": "d7d3fdd5439f131fa631b58c30b1a44f"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\2073ab2aacd4415fb7393b6f3aabbfa6_chart.json": {
+    "mtime": 1779029919.076817,
+    "ast_hash": "2a78a49ad08d4be2da240f8980da496b",
+    "semantic_hash": "2a78a49ad08d4be2da240f8980da496b"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\328a3818ddf84f67b71fa8382993a3ee_chart.json": {
+    "mtime": 1779022910.7370257,
+    "ast_hash": "3d58fa723df9b1cfda29d3b2b83ccfda",
+    "semantic_hash": "3d58fa723df9b1cfda29d3b2b83ccfda"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\3392111d180c4d9bb3c2b5ee2f80843e_chart.json": {
+    "mtime": 1779025057.019672,
+    "ast_hash": "c164571c00d433f06b9cad8fa6414870",
+    "semantic_hash": "c164571c00d433f06b9cad8fa6414870"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\3499ed62457f4537bfcd5f558eec9495_chart.json": {
+    "mtime": 1779030944.119418,
+    "ast_hash": "ff26ce2f227b7d24e92733fb2a613b1d",
+    "semantic_hash": "ff26ce2f227b7d24e92733fb2a613b1d"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\35c7629f1a784df6873ba6ee19b301f8_chart.json": {
+    "mtime": 1779029028.21659,
+    "ast_hash": "7259da962adac8a8300c97fc6cdfcff4",
+    "semantic_hash": "7259da962adac8a8300c97fc6cdfcff4"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\5bb735f6ec1a4ce5ba4f12926c3ac8bc_chart.json": {
+    "mtime": 1779027637.903188,
+    "ast_hash": "0943a761cf18fdf31ddf2b9c12285aad",
+    "semantic_hash": "0943a761cf18fdf31ddf2b9c12285aad"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\7650dfacdb4c42bcb5a87e4367313eaf_chart.json": {
+    "mtime": 1779026112.8658302,
+    "ast_hash": "093f9d2e3e983d86a9ef0045f027c7d3",
+    "semantic_hash": "093f9d2e3e983d86a9ef0045f027c7d3"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\876278a6d8f64caeadf4a93a47baa8ca_chart.json": {
+    "mtime": 1779024185.3065703,
+    "ast_hash": "c60748a06259d9dd845fbc7a12640afa",
+    "semantic_hash": "c60748a06259d9dd845fbc7a12640afa"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\a8805c5471524e3bbfe0610dc6b6d6f0_chart.json": {
+    "mtime": 1779027307.6792152,
+    "ast_hash": "64f56e65cf501132184bb4d1bb1eaadf",
+    "semantic_hash": "64f56e65cf501132184bb4d1bb1eaadf"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\a9011f68ea7e41e2adcb3e17c2aa42d6_chart.json": {
+    "mtime": 1779024523.5818272,
+    "ast_hash": "80ccedf8651592299b0b62ea14a2d5df",
+    "semantic_hash": "80ccedf8651592299b0b62ea14a2d5df"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\aee9dca1667343af8b6ff897250cc38a_chart.json": {
+    "mtime": 1779028287.6955128,
+    "ast_hash": "268db186eb12aaaaf055c38801fe3df2",
+    "semantic_hash": "268db186eb12aaaaf055c38801fe3df2"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\af5c8402c2e04373a9fd554440ffb340_chart.json": {
+    "mtime": 1779028699.87559,
+    "ast_hash": "3c6b6d3aa821722d908f2085770a9b4a",
+    "semantic_hash": "3c6b6d3aa821722d908f2085770a9b4a"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\c83f762d272743c9bb9678fe35e57294_chart.json": {
+    "mtime": 1779029316.3426983,
+    "ast_hash": "50e9ca41634517bec829928bf3091082",
+    "semantic_hash": "50e9ca41634517bec829928bf3091082"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\cc2d84ab19f042d8aac68840a0ac441a_chart.json": {
+    "mtime": 1779031037.4289906,
+    "ast_hash": "6e6f9907b9e90c13e6ce24a582fb0e1a",
+    "semantic_hash": "6e6f9907b9e90c13e6ce24a582fb0e1a"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\d07529492bf14548b6320f671e730cda_chart.json": {
+    "mtime": 1779027583.534382,
+    "ast_hash": "8cc31e081ac0af3ed943f428df7bc984",
+    "semantic_hash": "8cc31e081ac0af3ed943f428df7bc984"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\e789545e8cdf47608928b9900023ac38_chart.json": {
+    "mtime": 1779030308.230537,
+    "ast_hash": "546e4c110ac114ada57b3697c3a31e17",
+    "semantic_hash": "546e4c110ac114ada57b3697c3a31e17"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\eae5b79f1340465f9d98e652f29defd8_chart.json": {
+    "mtime": 1779025387.921718,
+    "ast_hash": "101bfbc9171737ef48e17187cc287aea",
+    "semantic_hash": "101bfbc9171737ef48e17187cc287aea"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\f9186d0059294bb99953c9dc9c5be1e0_chart.json": {
+    "mtime": 1779027051.1439312,
+    "ast_hash": "c22323d01e4f8dc9e21794e3d820fe06",
+    "semantic_hash": "c22323d01e4f8dc9e21794e3d820fe06"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\fcd276ba6a0a4af7b5f14e1c389d964b_chart.json": {
+    "mtime": 1779029581.429842,
+    "ast_hash": "af63a62f8e12f3877ed5708d2590ad46",
+    "semantic_hash": "af63a62f8e12f3877ed5708d2590ad46"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\backend\\outputs\\fd27578e962d47dba19b8ff48e6f0dbf_chart.json": {
+    "mtime": 1779026083.7714999,
+    "ast_hash": "b782f8fff76bf3f48082105dfc0f5acd",
+    "semantic_hash": "b782f8fff76bf3f48082105dfc0f5acd"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\package.json": {
+    "mtime": 1779020274.2907052,
+    "ast_hash": "0dd1b3b3640f7636c92b3c200e150fe4",
+    "semantic_hash": "0dd1b3b3640f7636c92b3c200e150fe4"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\vite.config.js": {
+    "mtime": 1779020274.2907052,
+    "ast_hash": "fc961c77a7b9c5afbeb47ae9061c109e",
+    "semantic_hash": "fc961c77a7b9c5afbeb47ae9061c109e"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\.vite\\deps\\package.json": {
+    "mtime": 1779038537.387319,
+    "ast_hash": "d0707362e90f00edd12435e9d3b9d71c",
+    "semantic_hash": "d0707362e90f00edd12435e9d3b9d71c"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\.vite\\deps\\_metadata.json": {
+    "mtime": 1779038537.6065297,
+    "ast_hash": "db4bf3a262515d7453d7e84e4181055a",
+    "semantic_hash": "db4bf3a262515d7453d7e84e4181055a"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\api.js": {
+    "mtime": 1779031194.9917164,
+    "ast_hash": "b4de9dfb77b4888fca04760a421b5558",
+    "semantic_hash": "b4de9dfb77b4888fca04760a421b5558"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\App.jsx": {
+    "mtime": 1779031270.73852,
+    "ast_hash": "6a515493f10902d7e50fc42b77bfd241",
+    "semantic_hash": "6a515493f10902d7e50fc42b77bfd241"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\main.jsx": {
+    "mtime": 1779020274.2907052,
+    "ast_hash": "0f88d0da5ed092c7977616d20124b8f9",
+    "semantic_hash": "0f88d0da5ed092c7977616d20124b8f9"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\components\\AnalysisPanel.jsx": {
+    "mtime": 1779020274.2907052,
+    "ast_hash": "5abcce294e6c4f0d93c08fbac5481b54",
+    "semantic_hash": "5abcce294e6c4f0d93c08fbac5481b54"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\components\\ExportPanel.jsx": {
+    "mtime": 1779020274.2907052,
+    "ast_hash": "35067927e2fe15bde91f5ee331be2fcd",
+    "semantic_hash": "35067927e2fe15bde91f5ee331be2fcd"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\components\\GamePlayer.jsx": {
+    "mtime": 1779030900.4120426,
+    "ast_hash": "52dccb6f270fcc1a1f4a40869b0e9fb4",
+    "semantic_hash": "52dccb6f270fcc1a1f4a40869b0e9fb4"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\components\\NoteTimeline.jsx": {
+    "mtime": 1779027903.5244286,
+    "ast_hash": "bdbbf05b6a08c79aee77750b859bff16",
+    "semantic_hash": "bdbbf05b6a08c79aee77750b859bff16"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\components\\UploadPanel.jsx": {
+    "mtime": 1779020274.2907052,
+    "ast_hash": "8b346b2b6f84fe81b33755798a8b766d",
+    "semantic_hash": "8b346b2b6f84fe81b33755798a8b766d"
+  },
+  "D:\\Develop\\Rythm-Game\\rhythm-note-generator\\legacy_web\\frontend\\src\\components\\WaveformViewer.jsx": {
+    "mtime": 1779020274.2907052,
+    "ast_hash": "37c332f10a81f830a026a8d451e6e914",
+    "semantic_hash": "37c332f10a81f830a026a8d451e6e914"
+  }
+}
