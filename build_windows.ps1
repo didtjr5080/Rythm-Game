@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "2026.11.07",
+    [string]$Version = "2026.11.07.1",
     [switch]$SkipBuild
 )
 $ErrorActionPreference = "Stop"
@@ -8,6 +8,8 @@ Push-Location -LiteralPath $projectRoot
 try {
     $python = Join-Path $projectRoot ".venv311/Scripts/python.exe"
     if (-not $SkipBuild) {
+        & $python packaging/make_icon.py
+        if ($LASTEXITCODE -ne 0) { throw "Icon generation failed." }
         & $python -m PyInstaller --noconfirm --distpath dist_windows --workpath build/windows EMG-Motion-Rhythm.spec
         if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed." }
     }

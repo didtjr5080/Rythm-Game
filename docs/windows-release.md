@@ -22,6 +22,8 @@ powershell -ExecutionPolicy Bypass -File build_windows.ps1
 
 EXTRACTED: 빌드는 `dist_windows/EMG-Motion-Rhythm`에 생성됩니다. EXE 자체 검사가 통과하면 `release/`에 ZIP, SHA256 파일, 검사 결과 JSON을 생성합니다.
 
+EXTRACTED: `app/assets/app.png`는 사용자가 제공한 아이콘 원본입니다. `packaging/make_icon.py`가 이미지를 자르지 않고 투명도를 유지한 다중 크기 `app.ico`로 변환합니다. 빌드 스크립트는 이 과정을 자동 실행하며, 아이콘은 EXE 리소스와 프로그램 창·작업 표시줄에 적용됩니다.
+
 ```powershell
 dist_windows/EMG-Motion-Rhythm/EMG-Motion-Rhythm.exe --self-test release/self-test.json
 ```

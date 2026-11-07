@@ -65,3 +65,4 @@ Graphify 리포트
 Windows 실행 파일 배포
 
 - [EXTRACTED: Windows EXE 다운로드·빌드·검사 안내](../docs/windows-release.md)
+- EXTRACTED: 같은 안내의 아이콘 항목에서 사용자 제공 PNG의 ICO 변환과 EXE·창 아이콘 적용 경로를 확인할 수 있습니다.

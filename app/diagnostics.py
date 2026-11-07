@@ -16,11 +16,15 @@ def run_self_test(output_path):
         from app.input.mediapipe_tracker import MediaPipeHandTracker
         from app.ui.theme import APP_STYLE, font_families
         from app.ui.dashboard import Instrument
+        from app.ui.app_icon import apply_app_icon, ICON_PATH
         from app.audio.audio_player import AudioPlayer
         from app.audio.note_generator_adapter import generate_notes_from_analysis
         from app import config
         from app.game.rhythm_game_engine import RhythmGameEngine
         app = QApplication.instance() or QApplication([])
+        assert ICON_PATH.is_file() and not apply_app_icon(app).isNull()
+        assert app.windowIcon().availableSizes()
+        report['checks'].append('Application icon resource and Qt window icon')
         font_families()
         app.setStyleSheet(APP_STYLE)
         tracker = MediaPipeHandTracker()

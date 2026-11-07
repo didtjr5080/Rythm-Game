@@ -1,5 +1,7 @@
 ## EMG Motion Rhythm — Windows x64
 
+아이콘 업데이트: 사용자 제공 손 엠블럼을 EXE·프로그램 창·작업 표시줄 아이콘으로 적용했습니다.
+
 ZIP 전체를 압축 해제한 뒤 `EMG-Motion-Rhythm.exe`를 실행하세요. Python 설치가 필요하지 않으며, `_internal` 폴더를 함께 유지해야 합니다.
 
 - Glassmorphism Sonic Lab UI, 원근 3레인과 크리스탈 노트·히트 파동
