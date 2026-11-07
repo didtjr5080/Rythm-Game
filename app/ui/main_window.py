@@ -38,19 +38,38 @@ class MainWindow(QMainWindow):
             else:
                 self.show()
 
+    def _release_current_inputs(self):
+        current=self.centralWidget()
+        if current is None: return
+        bio=getattr(current,'bio',None)
+        if bio is not None and hasattr(bio,'stop_live'): bio.stop_live()
+        if isinstance(current,CalibrationScreen): current.stop()
+        if isinstance(current,SettingsScreen): current.stop_camera_preview()
+
+    def closeEvent(self,event):
+        self._release_current_inputs()
+        current=self.centralWidget()
+        if isinstance(current,GameWidget): current.close()
+        super().closeEvent(event)
+
     def show_start_screen(self):
+        self._release_current_inputs()
         self.setCentralWidget(StartScreen(self))
 
     def show_calibration_screen(self):
+        self._release_current_inputs()
         self.setCentralWidget(CalibrationScreen(self))
 
     def show_settings_screen(self):
+        self._release_current_inputs()
         self.setCentralWidget(SettingsScreen(self))
 
     def show_results_browser_screen(self):
+        self._release_current_inputs()
         self.setCentralWidget(ResultsBrowserScreen(self))
 
     def show_game_widget(self):
+        self._release_current_inputs()
         if self.selected_song_path and not self.notes_path:
             saved_notes = find_saved_notes_for_song(self.selected_song_path)
             if saved_notes:

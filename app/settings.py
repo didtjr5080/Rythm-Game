@@ -10,11 +10,16 @@ DEFAULT_SETTINGS = {
     "show_judgement_text": True,
     "show_camera_debug": True,
     "camera_flip": True,
+    "camera_enabled": True,
+    "camera_index": 0,
+    "camera_resolution": "1280x720",
     "music_volume": 0.85,
     "note_speed": 450,
     "judgement_line_y_ratio": 0.82,
     "emg_threshold": 400,
 }
+
+CAMERA_RESOLUTIONS = ("640x480", "1280x720", "1920x1080")
 
 AVAILABLE_RESOLUTIONS = (
     "800x600",
@@ -64,6 +69,13 @@ def load_settings() -> dict:
         return dict(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings.update({key: data[key] for key in DEFAULT_SETTINGS if key in data})
+    settings["camera_enabled"] = bool(settings["camera_enabled"])
+    try:
+        settings["camera_index"] = max(0, min(9, int(settings["camera_index"])))
+    except (ValueError, TypeError):
+        settings["camera_index"] = 0
+    if settings["camera_resolution"] not in CAMERA_RESOLUTIONS:
+        settings["camera_resolution"] = "1280x720"
     settings["language"] = settings["language"] if settings["language"] in {"en", "ko"} else "en"
     settings["window_mode"] = settings["window_mode"] if settings["window_mode"] in {"windowed", "borderless", "fullscreen"} else "windowed"
     settings["resolution"] = settings["resolution"] if settings["resolution"] in AVAILABLE_RESOLUTIONS else "1280x720"
@@ -81,6 +93,13 @@ def load_settings() -> dict:
 def save_settings(settings: dict) -> dict:
     merged = dict(DEFAULT_SETTINGS)
     merged.update({key: settings[key] for key in DEFAULT_SETTINGS if key in settings})
+    merged["camera_enabled"] = bool(merged["camera_enabled"])
+    try:
+        merged["camera_index"] = max(0, min(9, int(merged["camera_index"])))
+    except (ValueError, TypeError):
+        merged["camera_index"] = 0
+    if merged["camera_resolution"] not in CAMERA_RESOLUTIONS:
+        merged["camera_resolution"] = "1280x720"
     merged["language"] = merged["language"] if merged["language"] in {"en", "ko"} else "en"
     merged["window_mode"] = merged["window_mode"] if merged["window_mode"] in {"windowed", "borderless", "fullscreen"} else "windowed"
     merged["resolution"] = merged["resolution"] if merged["resolution"] in AVAILABLE_RESOLUTIONS else "1280x720"

@@ -17,6 +17,9 @@ class GameInputState:
     hand_y: float | None
     finger_count: int | None
     timestamp: float
+    tracker_status: str | None = None
+    hand_label: str | None = None
+    tracker_error: str | None = None
 
 
 class InputFusion:
@@ -30,6 +33,14 @@ class InputFusion:
         self.tracker = MediaPipeHandTracker(flip=camera_flip) if use_camera else None
         self.emg_reader = MockEMGReader(emg_threshold) if use_mock_emg else SerialEMGReader(threshold=emg_threshold)
         self.last_camera_frame = None
+        self.latest_frame_rgb = None
+        self.finger_states = None
+        self.hand_landmarks_norm = None
+        self.raw_emg_value = 0.0
+        self.filtered_emg_value = 0.0
+        self.emg_mvc_ratio = 0.0
+        self.last_timing_error_ms = None
+        self.current_lane = None
 
     def set_space_pressed(self, pressed: bool):
         if hasattr(self.emg_reader, "set_space_pressed"):
@@ -66,8 +77,23 @@ class InputFusion:
             hand_y=hand.get("y"),
             finger_count=hand.get("finger_count"),
             timestamp=time.time(),
+            tracker_status=getattr(self.tracker, "status", None),
+            hand_label=hand.get("hand_label"),
+            tracker_error=getattr(self.tracker, "last_error", None),
         )
         self.last_camera_frame = hand.get("frame")
+        self.current_lane = state.lane
+        self.hand_landmarks_norm = hand.get("landmarks")
+        self.finger_states = hand.get("finger_states")
+        self.raw_emg_value = float(emg_value)
+        self.filtered_emg_value += .18 * (self.raw_emg_value - self.filtered_emg_value)
+        self.emg_mvc_ratio = self.filtered_emg_value / max(1, self.emg_reader.threshold)
+        self.latest_frame_rgb = None
+        if self.last_camera_frame is not None:
+            try:
+                self.latest_frame_rgb = self.last_camera_frame[:, :, ::-1].copy()
+            except (TypeError, IndexError, AttributeError):
+                pass
         return state, self.last_camera_frame
 
     def close(self):

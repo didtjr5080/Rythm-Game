@@ -1,7 +1,9 @@
 import time
+import math
+from collections import deque
 
 from PyQt6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
-from PyQt6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPixmap, QLinearGradient, QPolygonF, QPainterPath
 from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 
 from app import config
@@ -12,7 +14,11 @@ from app.game.rhythm_game_engine import RhythmGameEngine
 from app.i18n import tr
 from app.input.input_fusion import GameInputState, InputFusion
 from app.settings import load_settings
+from app.input.camera import CameraSource, draw_camera_frame
 
+
+from app.ui.theme import (draw_aurora_background, draw_frosted_glass_card, draw_crystal_note,
+    draw_circular_gauge, draw_hand_skeleton_overlay, draw_waveform, text, finger_summary)
 
 LANE_NAMES = ["LEFT", "CENTER", "RIGHT"]
 
@@ -27,13 +33,19 @@ class GameWidget(QWidget):
         self.language = self.settings["language"]
         self.engine = RhythmGameEngine.from_json_file(notes_path) if notes_path else RhythmGameEngine()
         self.input_fusion = InputFusion(
+            use_camera=config.USE_CAMERA and self.settings["camera_enabled"],
             emg_threshold=int(self.settings["emg_threshold"]),
             camera_flip=bool(self.settings["camera_flip"]),
         )
         self.session_logger = SessionLogger()
         self.audio_player = AudioPlayer(self.song_path, volume=self.settings["music_volume"])
         self.start_time = time.monotonic()
-        self.current_input = GameInputState(None, 0.0, False, False, None, None, None, time.time())
+        self.current_input = GameInputState(None, 0.0, False, False, None, None, None, time.time(), None, None, None)
+        self.ar_camera = False
+        self.raw_history = deque(maxlen=120)
+        self.filtered_history = deque(maxlen=120)
+        self.ripples = []
+        self.previous_activation = False
         self.camera_pixmap = None
         self.camera_debug_pixmap = None
         self.camera_flip = bool(self.settings["camera_flip"])
@@ -58,30 +70,12 @@ class GameWidget(QWidget):
         self.timer.start(max(1, int(1000 / config.FPS)))
 
     def _open_camera(self):
-        if not config.USE_CAMERA:
-            return
-        try:
-            import cv2
-
-            self.cv2 = cv2
-            self.capture = cv2.VideoCapture(config.CAMERA_INDEX)
-            if not self.capture.isOpened():
-                print("Camera is not available. Keyboard lane fallback remains enabled.")
-                self.capture.release()
-                self.capture = None
-        except Exception as exc:
-            print(f"OpenCV camera setup failed: {exc}")
-            self.capture = None
+        self.camera_source = CameraSource(self.settings, enabled=config.USE_CAMERA)
+        self.capture = self.camera_source.capture
+        self.cv2 = self.camera_source.cv2
 
     def _read_camera_frame(self):
-        if self.capture is None:
-            return None
-        try:
-            ok, frame = self.capture.read()
-            return frame if ok else None
-        except Exception as exc:
-            print(f"Camera read failed: {exc}")
-            return None
+        return self.camera_source.read()
 
     def _update_camera_pixmap(self, frame):
         if frame is None or self.cv2 is None:
@@ -105,8 +99,18 @@ class GameWidget(QWidget):
             self.camera_pixmap = None
             self.camera_debug_pixmap = None
 
+    def _playback_time_ms(self):
+        if self.song_path and not self.audio_player.error:
+            return self.audio_player.position_ms
+        return int((time.monotonic()-self.start_time)*1000)
+
+    def _should_finish(self, current_time_ms):
+        if self.song_path and not self.audio_player.error:
+            return self.audio_player.finished
+        return self.engine.is_finished(current_time_ms)
+
     def game_loop(self):
-        current_time_ms = int((time.monotonic() - self.start_time) * 1000)
+        current_time_ms = self._playback_time_ms()
         raw_frame = self._read_camera_frame()
         input_state, _tracked_frame = self.input_fusion.read(raw_frame)
         if not input_state.hand_visible and self.manual_lane is not None:
@@ -117,16 +121,28 @@ class GameWidget(QWidget):
         self.current_input = input_state
         self._update_camera_pixmap(raw_frame)
 
+        self.raw_history.append(self.input_fusion.raw_emg_value)
+        self.filtered_history.append(self.input_fusion.filtered_emg_value)
+        if input_state.emg_activated and not self.previous_activation:
+            self.ripples.append((current_time_ms, input_state.lane if input_state.lane is not None else 1))
+        self.previous_activation = input_state.emg_activated
+        self.ripples = [(t,l) for t,l in self.ripples if current_time_ms-t<800]
+        if self.song_path and self.audio_player.loading:
+            self.update()
+            return
         result = self.engine.update(input_state, current_time_ms)
         note_index = self.engine.last_judged_note_index
         if result in {"PERFECT", "GOOD"} and 0 <= note_index < len(self.engine.notes):
-            self.input_delays_ms.append(current_time_ms - self.engine.notes[note_index].hit_time_ms)
+            delay = current_time_ms - self.engine.notes[note_index].hit_time_ms
+            self.input_delays_ms.append(delay)
+            self.input_fusion.last_timing_error_ms = delay
+            self.ripples.append((current_time_ms, self.engine.notes[note_index].lane))
         if result:
             self.result_flash = result
             self.result_flash_time_ms = current_time_ms
         self.session_logger.log(current_time_ms, input_state, note_index, result)
 
-        if self.engine.is_finished(current_time_ms):
+        if self._should_finish(current_time_ms):
             self.finish_game()
             return
         self.update()
@@ -140,8 +156,7 @@ class GameWidget(QWidget):
         if app is not None:
             app.removeEventFilter(self)
         self.audio_player.stop()
-        if self.capture is not None:
-            self.capture.release()
+        self.camera_source.release()
         self.input_fusion.close()
         session_paths = self.session_logger.save() if config.SAVE_SESSION_LOG else None
         metrics = calculate_game_metrics(self.engine.score_state, self.session_logger.rows, self.input_delays_ms)
@@ -156,8 +171,7 @@ class GameWidget(QWidget):
         if app is not None:
             app.removeEventFilter(self)
         self.audio_player.stop()
-        if self.capture is not None:
-            self.capture.release()
+        self.camera_source.release()
         self.input_fusion.close()
         self.main_window.show_start_screen()
 
@@ -192,6 +206,7 @@ class GameWidget(QWidget):
             Qt.Key.Key_S,
             Qt.Key.Key_D,
             Qt.Key.Key_F,
+            Qt.Key.Key_V,
         }
 
     def keyPressEvent(self, event):
@@ -214,127 +229,121 @@ class GameWidget(QWidget):
             self.manual_lane = 1
         elif key in (Qt.Key.Key_Right, Qt.Key.Key_D):
             self.manual_lane = 2
+        elif key == Qt.Key.Key_V:
+            self.ar_camera = not self.ar_camera
         elif key == Qt.Key.Key_F:
             self.camera_flip = not self.camera_flip
             self.input_fusion.set_camera_flip(self.camera_flip)
             print(f"Camera flip set to {self.camera_flip}")
 
     def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor("#101216"))
-        width = self.width()
-        height = self.height()
-        lane_width = width / config.LANE_COUNT
-        judge_y = height * float(self.settings["judgement_line_y_ratio"])
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        scale=min(self.width()/1280, self.height()/720)
+        offset_x=(self.width()-1280*scale)/2
+        offset_y=(self.height()-720*scale)/2
+        p.fillRect(self.rect(),QColor('#080B12'))
+        p.translate(offset_x,offset_y)
+        p.scale(scale,scale)
+        draw_aurora_background(p, QRectF(0,0,1280,720))
+        if self.ar_camera and self.camera_pixmap is not None:
+            p.save(); p.setOpacity(.18); p.drawPixmap(QRectF(0,0,1280,720),self.camera_pixmap,QRectF(self.camera_pixmap.rect())); p.restore()
+        top, bottom = 216.,720.
+        def edge(y):
+            t=(y-top)/(bottom-top)
+            return 640-(90+320*t), 640+(90+320*t)
+        def lane_x(y,lane):
+            left,right=edge(y); return left+(right-left)*(lane+.5)/3
+        g=QLinearGradient(0,top,0,bottom); g.setColorAt(0,QColor(16,24,39,25)); g.setColorAt(1,QColor(70,90,105,165))
+        poly=QPolygonF([QPointF(550,top),QPointF(730,top),QPointF(1050,bottom),QPointF(230,bottom)])
+        p.setBrush(g); p.setPen(QPen(QColor(210,240,240,90),2)); p.drawPolygon(poly)
+        lane=self.current_input.lane
+        if lane is not None:
+            left,right=edge(bottom); tw=180/3; bw=(right-left)/3
+            beam=QLinearGradient(0,top,0,bottom); beam.setColorAt(0,QColor(16,185,129,0)); beam.setColorAt(1,QColor(16,185,129,55))
+            p.setBrush(beam); p.setPen(Qt.PenStyle.NoPen); p.drawPolygon(QPolygonF([QPointF(550+tw*lane,top),QPointF(550+tw*(lane+1),top),QPointF(left+bw*(lane+1),bottom),QPointF(left+bw*lane,bottom)]))
+        for i in range(4):
+            p.setPen(QPen(QColor('#6EE7B7' if i==0 else '#C4B5FD') if i in (0,3) else QColor(200,220,230,55),2 if i in (0,3) else 1))
+            p.drawLine(QPointF(550+i*60,top),QPointF(230+i*820/3,bottom))
+        judge_y=720*float(self.settings['judgement_line_y_ratio'])
+        left,right=edge(judge_y)
+        laser=QLinearGradient(left,0,right,0); laser.setColorAt(0,QColor('#6EE7B7')); laser.setColorAt(1,QColor('#C4B5FD'))
+        p.setPen(QPen(laser,3)); p.drawLine(QPointF(left,judge_y),QPointF(right,judge_y))
+        now=self._playback_time_ms()
+        # Map the existing engine's travel distance so hit time stays exactly on the laser.
+        travel=max(1,(judge_y-top)/int(self.settings['note_speed'])*1000)
+        for note in reversed(self.engine.notes):
+            if note.judged: continue
+            progress=1-(note.hit_time_ms-now)/travel
+            if not 0<=progress<=1.13: continue
+            depth=progress**1.65
+            y=top+(judge_y-top)*depth
+            x=lane_x(y,note.lane); size=14+depth*64
+            draw_crystal_note(p,QRectF(x-size/2,y-size*.65,size,size*.7),note.lane==2)
+        for born,lane in self.ripples:
+            age=(now-born)/800; x=lane_x(judge_y,lane)
+            for ring in range(4):
+                radius=18+age*105+ring*15
+                p.setBrush(Qt.BrushStyle.NoBrush); p.setPen(QPen(QColor(185,255,235,max(0,int((1-age)*170-ring*25))),2))
+                p.drawEllipse(QPointF(x,judge_y),radius,radius*.28)
+        if self.settings.get('show_judgement_text',True):
+            active=self.result_flash and now-self.result_flash_time_ms<650
+            label=self.result_flash if active else 'SONIC LAB'
+            text(p,QRectF(390,90,500,58),label,32,'#F43F5E' if label=='MISS' else '#F8FAFC')
+            text(p,QRectF(430,148,420,34),f'{self.engine.score_state.combo} COMBO',21,'#6EE7B7')
+            if active: text(p,QRectF(390,460,500,55),label,30)
+        if self.settings.get('show_game_hud',True):
+            self._draw_lab_hud(p)
+        if self.song_path:
+            status = self.audio_player.error or ('LOADING AUDIO...' if self.audio_player.loading else f'{self.audio_player.position_ms/1000:.0f}s / {self.audio_player.duration_seconds:.0f}s')
+            text(p,QRectF(320,626,640,22),status,10,'#94A3B8')
+        text(p,QRectF(300,654,680,24),self.camera_source.status+' / 1=LEFT  2=CENTER  3=RIGHT  4/5=HAND POSITION',9,'#94A3B8')
+        text(p,QRectF(280,687,720,24),'A / S / D  /  SPACE: EMG  /  F: FLIP  /  V: AR CAMERA',10,'#94A3B8')
 
+    def _draw_lab_hud(self,p):
+        draw_frosted_glass_card(p,QRectF(42,100,282,190),'EMG DSP FILTER & THRESHOLD')
+        draw_waveform(p,QRectF(62,155,242,105),self.raw_history,self.filtered_history)
+        draw_frosted_glass_card(p,QRectF(42,320,250,220),'EMG BIO-SIGNAL')
+        ratio=self.input_fusion.emg_mvc_ratio
+        draw_circular_gauge(p,QRectF(88,357,157,157),ratio,f'{ratio*100:.0f}%','MVC ACTIVE')
+        draw_frosted_glass_card(p,QRectF(940,70,300,245),'LIVE WEBCAM FEED & HAND TRACKING')
+        view=QRectF(952,110,276,185)
+        p.save(); clip=QPainterPath(); clip.addRoundedRect(view,8,8); p.setClipPath(clip)
         if self.camera_pixmap is not None:
-            scaled_camera = self.camera_pixmap.scaled(
-                self.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation
-            )
-            x = int((width - scaled_camera.width()) / 2)
-            y = int((height - scaled_camera.height()) / 2)
-            painter.drawPixmap(x, y, scaled_camera)
-            painter.fillRect(self.rect(), QColor(0, 0, 0, 85))
-
-        painter.setFont(QFont("Arial", 13))
-        for lane in range(config.LANE_COUNT):
-            x = lane * lane_width
-            color = QColor(24, 30, 38, 95) if lane % 2 == 0 else QColor(12, 17, 24, 95)
-            if self.current_input.lane == lane and self.current_input.hand_visible:
-                color = QColor(31, 102, 140, 120)
-            painter.fillRect(QRectF(x, 0, lane_width - 2, height), color)
-            painter.setPen(QPen(QColor(255, 255, 255, 80), 1))
-            painter.drawLine(int(x), 0, int(x), height)
-            painter.setPen(QColor("#d8dde6"))
-            painter.drawText(QRectF(x, 16, lane_width, 32), Qt.AlignmentFlag.AlignCenter, LANE_NAMES[lane])
-
-        painter.setPen(QPen(QColor("#f2c94c"), 4))
-        painter.drawLine(0, int(judge_y), width, int(judge_y))
-
-        current_time_ms = int((time.monotonic() - self.start_time) * 1000)
-        for note, y in self.engine.visible_notes(
-            current_time_ms,
-            height,
-            note_speed=int(self.settings["note_speed"]),
-            judgement_line_y_ratio=float(self.settings["judgement_line_y_ratio"]),
-        ):
-            note_x = note.lane * lane_width + lane_width * 0.18
-            note_rect = QRectF(note_x, y - 18, lane_width * 0.64, 36)
-            painter.setBrush(QColor("#4fd1c5"))
-            painter.setPen(QPen(QColor("#e6fffb"), 2))
-            painter.drawRoundedRect(note_rect, 6, 6)
-
-        if self.settings.get("show_judgement_text", True):
-            self._draw_judgement_flash(painter, current_time_ms)
-        self._draw_score_overlay(painter)
-        if self.settings.get("show_game_hud", True):
-            self._draw_hud(painter)
-
-    def _draw_judgement_flash(self, painter: QPainter, current_time_ms: int):
-        if not self.result_flash:
-            return
-        age = current_time_ms - self.result_flash_time_ms
-        if age > 650:
-            return
-        alpha = max(0, 255 - int(age / 650 * 255))
-        center_y = self.height() * 0.46
-        colors = {
-            "PERFECT": QColor("#63f7dd"),
-            "GOOD": QColor("#f7d95e"),
-            "MISS": QColor("#ff5f77"),
-        }
-        color = colors.get(self.result_flash, QColor("#ffffff"))
-        color.setAlpha(alpha)
-        painter.setFont(QFont("Arial", 42, QFont.Weight.Black))
-        painter.setPen(color)
-        painter.drawText(
-            QRectF(0, center_y - 54, self.width(), 90),
-            Qt.AlignmentFlag.AlignCenter,
-            self.result_flash,
-        )
-
-    def _draw_score_overlay(self, painter: QPainter):
-        score = self.engine.score_state
-        painter.setFont(QFont("Arial", 22, QFont.Weight.Black))
-        painter.setPen(QColor("#ffffff"))
-        painter.drawText(QRectF(18, 16, 260, 36), Qt.AlignmentFlag.AlignLeft, f"{score.score:07d}")
-        painter.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-        painter.setPen(QColor("#b9c5d8"))
-        painter.drawText(QRectF(20, 50, 260, 28), Qt.AlignmentFlag.AlignLeft, f"COMBO {score.combo}")
-
-    def _draw_hud(self, painter: QPainter):
-        score = self.engine.score_state
-        state = self.current_input
-        lane_name = LANE_NAMES[state.lane] if state.lane is not None else "NONE"
-        hud_lines = [
-            f"score: {score.score}",
-            f"combo: {score.combo}",
-            f"last: {self.engine.last_result or '-'}",
-            f"hand visible: {state.hand_visible}",
-            f"finger number: {state.finger_count if state.finger_count is not None else '-'}",
-            f"hand lane: {lane_name}",
-            f"EMG value: {state.emg_value:.0f}",
-            f"EMG threshold: {int(self.settings['emg_threshold'])}",
-            f"EMG activated: {state.emg_activated}",
-            f"camera flip: {self.camera_flip} (F)",
-            f"audio: {'selected' if self.song_path else 'none'}",
-            "Finger lane: 1=LEFT 2=CENTER 3=RIGHT",
-            "MOCK EMG MODE: SPACE",
-            "Lane fallback: A/S/D or Left/Down/Right",
-        ]
-        painter.setFont(QFont("Arial", 12))
-        painter.setPen(QColor("#f5f7fb"))
-        x = 20
-        y = 88
-        for line in hud_lines:
-            painter.drawText(QPointF(x, y), line)
-            y += 24
-        if self.camera_debug_pixmap is not None:
-            painter.drawPixmap(self.width() - self.camera_debug_pixmap.width() - 20, 52, self.camera_debug_pixmap)
+            image_bounds=draw_camera_frame(p,view,self.camera_pixmap)
+            p.fillRect(view,QColor(8,11,18,45))
+        else:
+            p.fillRect(view,QColor(8,16,24,180))
+            for i in range(12):
+                p.setPen(QColor(100,180,170,22)); x=view.x()+i*25; p.drawLine(QPointF(x,view.top()),QPointF(x,view.bottom()))
+        landmarks=self.input_fusion.hand_landmarks_norm
+        if landmarks or self.camera_pixmap is None:
+            draw_hand_skeleton_overlay(p,image_bounds if landmarks and self.camera_pixmap is not None else view.adjusted(20,5,-20,-20),landmarks,time.monotonic(),finger_states=self.input_fusion.finger_states)
+        lane=self.current_input.lane
+        for i in range(3):
+            cell=QRectF(view.x()+i*view.width()/3,view.y(),view.width()/3,view.height())
+            p.setBrush(Qt.BrushStyle.NoBrush); p.setPen(QPen(QColor('#6EE7B7') if i==lane else QColor(255,255,255,40),2 if i==lane else 1)); p.drawRect(cell)
+            text(p,QRectF(cell.x(),cell.bottom()-22,cell.width(),20),LANE_NAMES[i],8)
+        p.restore()
+        fallback=not self.input_fusion.hand_landmarks_norm
+        text(p,QRectF(950,298,280,16),('LIVE CAMERA / NO LANDMARKS' if self.camera_pixmap is not None else 'CAMERA UNAVAILABLE / SIMULATION') if fallback else 'LIVE 21-POINT TRACKING',8,'#94A3B8')
+        draw_frosted_glass_card(p,QRectF(1010,337,230,100),'LIVE CALIBRATION')
+        count=self.current_input.finger_count
+        text(p,QRectF(1024,376,200,22),f"FINGERS: {count if count is not None else '--'} / {self.current_input.hand_label or '--'}",11)
+        text(p,QRectF(1024,400,200,18),finger_summary(self.input_fusion.finger_states),8,'#94A3B8')
+        lane=self.current_input.lane
+        text(p,QRectF(1024,417,200,16),f'LANE: {LANE_NAMES[lane] if lane is not None else chr(45)}',9,'#6EE7B7')
+        draw_frosted_glass_card(p,QRectF(1010,450,230,60))
+        error=self.input_fusion.last_timing_error_ms
+        text(p,QRectF(1018,465,214,30),f'TIMING ERROR: {error:+.0f}ms' if error is not None else 'TIMING ERROR: --',12,'#C4B5FD')
+        draw_frosted_glass_card(p,QRectF(1010,525,230,94),'SCORE')
+        text(p,QRectF(1020,561,210,45),f'{self.engine.score_state.score:07,d}',27)
 
     def closeEvent(self, event):
+        self.timer.stop()
+        app = QApplication.instance()
+        if app is not None: app.removeEventFilter(self)
         self.audio_player.stop()
-        if self.capture is not None:
-            self.capture.release()
+        self.camera_source.release()
         self.input_fusion.close()
         super().closeEvent(event)

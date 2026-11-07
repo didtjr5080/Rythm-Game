@@ -27,7 +27,12 @@ from app.i18n import tr
 from app.settings import load_settings
 
 
-class StartScreen(QWidget):
+from app.ui.theme import AuroraScreen, GlassPanel
+from app.ui.dashboard import Instrument
+from app.game.rhythm_game_engine import RhythmGameEngine
+import json
+
+class StartScreen(AuroraScreen):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
@@ -49,6 +54,7 @@ class StartScreen(QWidget):
         self._build()
         self.refresh_saved_songs()
         self.update_selected_panel()
+        self.bio.start_live()
 
     @property
     def songs_dir(self) -> Path:
@@ -57,23 +63,31 @@ class StartScreen(QWidget):
         return path
 
     def _build(self):
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(22, 18, 22, 18)
-        outer.setSpacing(14)
-
-        outer.addLayout(self._top_bar())
-
-        body = QGridLayout()
-        body.setSpacing(16)
-        body.addWidget(self._selected_panel(), 0, 0)
-        body.addWidget(self._browser_panel(), 0, 1)
-        body.setColumnStretch(0, 5)
-        body.setColumnStretch(1, 4)
-        outer.addLayout(body, 1)
-
-        outer.addWidget(self._bottom_bar())
-        outer.addWidget(self.status)
-        self._log("Saved notes are loaded automatically when a selected song already has a notes file.")
+        outer=QVBoxLayout(self); outer.setContentsMargins(35,24,35,20); outer.setSpacing(14)
+        title=QLabel('EMG MOTION RHYTHM / SONIC LAB'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        outer.addWidget(title)
+        sub=QLabel('SESSION: STANDBY / SONG SELECTION & BIO-CALIBRATION'); sub.setObjectName('subtitle'); sub.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(sub)
+        row=QHBoxLayout(); row.setSpacing(24)
+        left=GlassPanel('SONG & BEAT DSP ANALYSIS'); ll=QVBoxLayout(left); ll.setContentsMargins(16,42,16,16)
+        self.song_instrument=Instrument('song'); ll.addWidget(self.song_instrument,1)
+        ll.addWidget(self.song_list); self.song_list.setMaximumHeight(90); self.song_list.setObjectName('beatmapList')
+        self.song_list.itemDoubleClicked.connect(self.load_saved_song_item)
+        self.song_list.currentItemChanged.connect(lambda current,previous: self.preview_song_item(current))
+        buttons=QHBoxLayout()
+        for label,callback in (('Add',self.select_song),('Load',self.load_selected_saved_song),('Refresh',self.refresh_saved_songs)):
+            button=QPushButton(label); button.clicked.connect(callback); buttons.addWidget(button)
+        ll.addLayout(buttons)
+        center=GlassPanel('NEURO-MOTOR PERFORMANCE REPORT'); cl=QVBoxLayout(center); cl.setContentsMargins(16,42,16,16)
+        self.performance=Instrument('performance'); cl.addWidget(self.performance,1)
+        cl.addWidget(self.selected_title); self.selected_title.setMinimumHeight(0); cl.addWidget(self.selected_notes)
+        self.selected_meta.setVisible(False)
+        right=GlassPanel('LIVE BIO-CALIBRATION'); rl=QVBoxLayout(right); rl.setContentsMargins(16,42,16,16)
+        self.bio=Instrument('bio'); self.bio.threshold=load_settings()['emg_threshold']; rl.addWidget(self.bio,1)
+        calibrate=QPushButton('Input Calibration'); calibrate.clicked.connect(self.main_window.show_calibration_screen); rl.addWidget(calibrate)
+        for panel in (left,center,right): row.addWidget(panel,1)
+        outer.addLayout(row,1); outer.addWidget(self._bottom_bar())
+        self.status.setMaximumHeight(45); outer.addWidget(self.status)
+        self._log('Select a song or start the sample chart. Keyboard: A/S/D + SPACE.')
 
     def _top_bar(self) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -238,8 +252,15 @@ class StartScreen(QWidget):
 
     def update_selected_panel(self, path: Path | None = None):
         selected = path or (Path(self.main_window.selected_song_path) if self.main_window.selected_song_path else None)
+        self.song_instrument.analysis = getattr(self.main_window, "song_analyses", {}).get(str(selected), {})
+        self.song_instrument.notes = RhythmGameEngine.generate_sample_notes() if selected is None else []
         if selected:
             notes_path = find_saved_notes_for_song(selected)
+            if notes_path:
+                try:
+                    self.song_instrument.notes = RhythmGameEngine.from_json_file(notes_path).notes
+                except (ValueError, OSError, TypeError):
+                    pass
             self.selected_title.setText(self.display_song_title(selected))
             self.selected_meta.setText(f"{selected.suffix.upper()[1:]}  |  {selected}")
             self.selected_notes.setText(f"NOTES  {'READY' if notes_path else 'MISSING'}")
@@ -259,12 +280,17 @@ class StartScreen(QWidget):
             self._log(f"No song selected. Saved sample notes: {path}")
             return
         analysis = analyze_audio_file(self.main_window.selected_song_path)
+        if not hasattr(self.main_window,'song_analyses'): self.main_window.song_analyses={}
+        self.main_window.song_analyses[self.main_window.selected_song_path]=analysis
+        self.song_instrument.analysis = analysis
         analysis["file_id"] = Path(self.main_window.selected_song_path).stem
         notes = generate_notes_from_analysis(analysis)
         path = save_notes_json(notes, song_path=self.main_window.selected_song_path)
         self.main_window.notes_path = str(path)
         self.refresh_saved_songs()
         self.update_selected_panel(Path(self.main_window.selected_song_path))
+        self.song_instrument.analysis = analysis
+        self.song_instrument.update()
         self._log(f"Generated and saved notes: {path}")
 
     def view_results(self):

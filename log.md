@@ -53,3 +53,16 @@ Notes
 EXTRACTED: Graphify cluster-only produced graph.html and GRAPH_REPORT.md.
 EXTRACTED: Session logs are saved to app/data/sessions/ as JSON/CSV.
 EXTRACTED: Result summaries are saved to app/data/results/ as JSON.
+
+2026-11-07
+
+Task
+
+EXTRACTED: 사용자 요청에 따른 UI·카메라·손가락 판정·전체 곡 재생 변경 사항과 Windows 실행 파일 배포 경로를 문서화했습니다.
+
+Files Updated
+
+README.md, docs/windows-release.md, wiki/index.md, diagrams/game-loop.md, WorkOrder/implementation_report.md
+
+EXTRACTED: 빌드 스크립트는 개인 음원·설정·기록을 제외하고 EXE 자체 검사 후 ZIP과 SHA256을 생성합니다.
+AMBIGUOUS: 물리 카메라·시리얼·스피커 조합의 실제 동작은 별도 기기 검증이 필요합니다. 기존 Graphify 그래프는 이번 변경 사항으로 재생성하지 않았습니다.

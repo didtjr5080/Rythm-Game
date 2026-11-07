@@ -1,6 +1,10 @@
 # Python
 
 .venv/
+.venv*/
+dist_*/
+release/
+packaging/__pycache__/
 venv/
 env/
 pycache/

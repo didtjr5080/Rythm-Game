@@ -2,10 +2,16 @@ import json
 import time
 from pathlib import Path
 
-from PyQt6.QtWidgets import QFrame, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 
-class ResultScreen(QWidget):
+from app.ui.theme import AuroraScreen, GlassPanel
+from app.ui.dashboard import Instrument
+from app.game.rhythm_game_engine import RhythmGameEngine
+from app.settings import load_settings
+
+class ResultScreen(AuroraScreen):
     def __init__(self, main_window, metrics: dict, session_paths: tuple | None = None):
         super().__init__()
         self.main_window = main_window
@@ -27,56 +33,23 @@ class ResultScreen(QWidget):
         self.result_path = path
 
     def _build(self):
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(36, 30, 36, 30)
-        outer.setSpacing(18)
-        title = QLabel("Play Result")
-        title.setObjectName("title")
-        saved = QLabel(f"Saved result: {self.result_path}")
-        saved.setObjectName("muted")
-        outer.addWidget(title)
-        outer.addWidget(saved)
-
-        panel = QFrame()
-        panel.setObjectName("panel")
-        grid = QGridLayout(panel)
-        grid.setContentsMargins(20, 20, 20, 20)
-        grid.setSpacing(12)
-        keys = (
-            "score",
-            "combo",
-            "max_combo",
-            "hit_count",
-            "miss_count",
-            "perfect_count",
-            "good_count",
-            "accuracy",
-            "avg_emg",
-            "max_emg",
-            "activation_count",
-            "avg_input_delay_ms",
-            "emg_drop_rate",
-        )
-        for index, key in enumerate(keys):
-            label = QLabel(key)
-            label.setObjectName("muted")
-            value = self.metrics.get(key, 0)
-            if isinstance(value, float):
-                value = f"{value:.2f}"
-            value_label = QLabel(str(value))
-            value_label.setObjectName("sectionTitle")
-            row = index // 3
-            col = (index % 3) * 2
-            grid.addWidget(label, row, col)
-            grid.addWidget(value_label, row, col + 1)
-        outer.addWidget(panel)
-
-        back = QPushButton("Back to Start")
-        back.setObjectName("primary")
-        if hasattr(self.main_window, "show_start_screen"):
-            back.clicked.connect(self.main_window.show_start_screen)
-        else:
-            back.clicked.connect(self.close)
-        outer.addWidget(back)
-        outer.addStretch(1)
-
+        outer=QVBoxLayout(self); outer.setContentsMargins(50,28,50,24)
+        title=QLabel('POST-GAME REHABILITATION ANALYTICS'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(title)
+        saved=QLabel(f'SESSION: COMPLETED / {self.result_path.name}'); saved.setObjectName('subtitle'); outer.addWidget(saved)
+        row=QHBoxLayout(); row.setSpacing(30)
+        for kind,heading in (('song','SONG & BEAT DSP ANALYSIS'),('performance','NEURO-MOTOR PERFORMANCE REPORT'),('bio','LIVE BIO-CALIBRATION')):
+            panel=GlassPanel(heading); layout=QVBoxLayout(panel); layout.setContentsMargins(16,44,16,18)
+            instrument=Instrument(kind); instrument.metrics=self.metrics; instrument.threshold=load_settings()['emg_threshold']
+            if kind=='song':
+                instrument.analysis=getattr(self.main_window,'song_analyses',{}).get(getattr(self.main_window,'selected_song_path',None),{})
+                path=getattr(self.main_window,'notes_path',None)
+                try: instrument.notes=RhythmGameEngine.from_json_file(path).notes if path else RhythmGameEngine.generate_sample_notes()
+                except (ValueError,OSError,TypeError): pass
+            if kind=='bio': instrument.sensor_status='SESSION COMPLETE // PREVIEW'
+            layout.addWidget(instrument,1)
+            if kind=='performance':
+                extra=QLabel(f"Avg EMG: {self.metrics.get('avg_emg',0):.1f}  /  Delay: {self.metrics.get('avg_input_delay_ms',0):+.1f}ms"); extra.setWordWrap(True); layout.addWidget(extra)
+                retry=QPushButton('Play Again'); retry.setObjectName('primary'); retry.clicked.connect(self.main_window.show_game_widget); layout.addWidget(retry)
+            row.addWidget(panel,1)
+        outer.addLayout(row,1)
+        back=QPushButton('Back to Start'); back.clicked.connect(self.main_window.show_start_screen); outer.addWidget(back)

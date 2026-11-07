@@ -1,5 +1,5 @@
 @echo off
-call .venv\Scripts\activate
-python app\main.py
+call .venv311\Scripts\activate
+.venv311\Scripts\python.exe app\main.py
 pause
 

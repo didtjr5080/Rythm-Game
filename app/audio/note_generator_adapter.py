@@ -34,7 +34,7 @@ def chart_to_motion_notes(chart: dict) -> list[dict]:
     notes = []
     for index, note in enumerate(raw_notes):
         raw_time = note.get("hit_time_ms", note.get("time", 0))
-        hit_time_ms = int(float(raw_time) * 1000) if float(raw_time) < 1000 else int(float(raw_time))
+        hit_time_ms = int(float(note["hit_time_ms"])) if "hit_time_ms" in note else int(float(raw_time)*1000)
         notes.append(
             {
                 "note_id": int(note.get("note_id", index)),

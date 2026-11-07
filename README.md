@@ -4,9 +4,9 @@ MediaPipe 손 위치 추적과 EMG 근전도 신호를 입력 장치로 활용�
 
 ## Game Mode
 
-- 손을 좌우로 움직여 3개 레인(LEFT, CENTER, RIGHT)을 선택합니다.
+- 펼친 손가락 1개는 LEFT, 2개는 CENTER, 3개는 RIGHT 레인을 선택합니다. 4~5개를 펼치면 손의 가로 위치로 레인을 선택합니다.
 - 노트가 판정선에 도착할 때 EMG 입력을 발생시킵니다.
-- 손 위치 레인과 노트 레인이 일치하고 EMG 값이 threshold 이상이면 HIT 판정이 발생합니다.
+- 선택된 레인과 노트 레인이 일치하고 EMG 값이 threshold 이상이면 HIT 판정이 발생합니다.
 - 판정은 PERFECT, GOOD, MISS로 구분됩니다.
 
 ## Legacy Web Code
@@ -21,15 +21,15 @@ MediaPipe 손 위치 추적과 EMG 근전도 신호를 입력 장치로 활용�
 Python 3.10 또는 3.11을 권장합니다.
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\activate
+python -m venv .venv311
+.venv311\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ## Run
 
 ```powershell
-python app/main.py
+.venv311\Scripts\python.exe app/main.py
 ```
 
 또는 Windows에서:
@@ -113,3 +113,9 @@ graphify .
 Check available commands:
 
 graphify --help
+
+## Windows EXE 다운로드와 빌드
+
+- 실행 파일: [GitHub Releases](https://github.com/didtjr5080/Rythm-Game/releases)에서 Windows ZIP을 받고 전체 압축을 해제한 뒤 `EMG-Motion-Rhythm.exe`를 실행하세요. `_internal` 폴더를 함께 유지해야 합니다.
+- 직접 빌드: `.venv311/Scripts/python.exe -m pip install -r requirements-build.txt` 후 `powershell -ExecutionPolicy Bypass -File build_windows.ps1`을 실행합니다.
+- [Windows 배포 안내](docs/windows-release.md)에 실행 방법, 카메라·고해상도 설정, EXE 자체 검사와 저장 위치를 정리했습니다.

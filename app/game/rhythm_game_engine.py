@@ -22,7 +22,7 @@ class RhythmGameEngine:
     @staticmethod
     def normalize_note_dict(raw_note: dict, index: int) -> Note:
         raw_time = raw_note.get("hit_time_ms", raw_note.get("time", 0))
-        hit_time_ms = int(float(raw_time) * 1000) if float(raw_time) < 1000 else int(float(raw_time))
+        hit_time_ms = int(float(raw_note["hit_time_ms"])) if "hit_time_ms" in raw_note else int(float(raw_time)*1000)
         return Note(
             note_id=int(raw_note.get("note_id", index)),
             lane=int(raw_note.get("lane", 0)) % config.LANE_COUNT,

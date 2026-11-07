@@ -61,3 +61,7 @@ EMG 입력 오류
 게임 루프 다이어그램
 파일 구조 다이어그램
 Graphify 리포트
+
+Windows 실행 파일 배포
+
+- [EXTRACTED: Windows EXE 다운로드·빌드·검사 안내](../docs/windows-release.md)

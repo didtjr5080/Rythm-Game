@@ -40,3 +40,12 @@ app/data/settings.json
 venv/
 env/
 ENV/
+
+# Local Python environments and historical executable builds
+.venv*/
+dist_*/
+release/
+WorkOrder/*_preview.png
+WorkOrder/*_1920x1080.png
+WorkOrder/*_1440x900.png
+WorkOrder/*_self_test.json
