@@ -12,6 +12,7 @@ from app.ui.theme import (draw_waveform, draw_crystal_note, draw_circular_gauge,
 class Instrument(QWidget):
     def __init__(self, kind, parent=None):
         super().__init__(parent)
+        self.compact=False
         self.kind=kind; self.metrics={}; self.analysis={}; self.notes=[]
         self.finger_states=None; self.hand_diagnostic=''; self.camera_pixmap=None; self.landmarks=None; self.threshold=400; self.ratio=0; self.sensor_status='PREVIEW // NOT CONNECTED'
         self.setMinimumSize(180,230)
@@ -58,8 +59,9 @@ class Instrument(QWidget):
 
     def paintEvent(self,event):
         p=QPainter(self); p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        scale=min(self.width()/300,self.height()/420)
-        p.translate((self.width()-300*scale)/2,(self.height()-420*scale)/2)
+        design_height=110 if self.kind=='song' and self.compact else 420
+        scale=min(self.width()/300,self.height()/design_height)
+        p.translate((self.width()-300*scale)/2,(self.height()-design_height*scale)/2)
         p.scale(scale,scale)
         if self.kind=='song': self._song(p)
         elif self.kind=='performance': self._performance(p)
@@ -72,6 +74,14 @@ class Instrument(QWidget):
         if len(values)>180: values=values[::max(1,len(values)//180)]
         if not preview:
             peak=max(values) or 1; values=[v/peak*550 for v in values]
+        if self.compact:
+            draw_waveform(p,QRectF(8,4,180,54),values)
+            text(p,QRectF(196,5,100,50),f"{self.analysis.get('bpm',0):.0f}" if self.analysis else '--',28)
+            text(p,QRectF(196,52,100,20),'BPM',10,'#94A3B8')
+            duration=self.analysis.get('duration',0)
+            density=f'{len(self.notes)/duration:.1f}/s' if duration else '--'
+            text(p,QRectF(8,82,284,24),f'NOTES: {len(self.notes)} / DENSITY: {density}',11,'#94A3B8')
+            return
         draw_waveform(p,QRectF(10,15,280,100),values)
         text(p,QRectF(5,130,290,64),f"{self.analysis.get('bpm',0):.0f} BPM" if self.analysis else '-- BPM',35)
         text(p,QRectF(10,198,280,22),'ILLUSTRATIVE WAVEFORM' if preview else 'AUDIO ENVELOPE',9,'#94A3B8')

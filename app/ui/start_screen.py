@@ -69,8 +69,20 @@ class StartScreen(AuroraScreen):
         sub=QLabel('SESSION: STANDBY / SONG SELECTION & BIO-CALIBRATION'); sub.setObjectName('subtitle'); sub.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(sub)
         row=QHBoxLayout(); row.setSpacing(24)
         left=GlassPanel('SONG & BEAT DSP ANALYSIS'); ll=QVBoxLayout(left); ll.setContentsMargins(16,42,16,16)
-        self.song_instrument=Instrument('song'); ll.addWidget(self.song_instrument,1)
-        ll.addWidget(self.song_list); self.song_list.setMaximumHeight(90); self.song_list.setObjectName('beatmapList')
+        self.song_instrument=Instrument('song'); self.song_instrument.compact=True
+        self.song_instrument.setMinimumHeight(100); self.song_instrument.setMaximumHeight(130)
+        ll.addWidget(self.song_instrument)
+        self.song_count=QLabel('SAVED MUSIC'); self.song_count.setObjectName('muted'); ll.addWidget(self.song_count)
+        ll.addWidget(self.song_list,1); self.song_list.setMinimumHeight(160); self.song_list.setObjectName('beatmapList')
+        self.song_list.setWordWrap(False)
+        self.song_list.setTextElideMode(Qt.TextElideMode.ElideRight)
+        self.song_list.setStyleSheet('''
+            QListWidget#beatmapList::item {background: #202c38; color: #f4f7fb;
+                border: 1px solid #334555; border-left: 3px solid #10B981;
+                padding: 4px 8px; margin: 2px 0; border-radius: 4px;}
+            QListWidget#beatmapList::item:alternate {background: #182432; border-left-color: #8B5CF6;}
+            QListWidget#beatmapList::item:selected {background: #294b48; border-color: #6EE7B7;}
+        ''')
         self.song_list.itemDoubleClicked.connect(self.load_saved_song_item)
         self.song_list.currentItemChanged.connect(lambda current,previous: self.preview_song_item(current))
         buttons=QHBoxLayout()
@@ -195,11 +207,13 @@ class StartScreen(AuroraScreen):
                 continue
             notes_path = find_saved_notes_for_song(path)
             notes_state = "notes ready" if notes_path else "no notes"
-            item = QListWidgetItem(f"{self.display_song_title(path)}\n{path.suffix.upper()[1:]}  |  {notes_state}")
+            item = QListWidgetItem(f"{self.display_song_title(path)}  [{path.suffix.upper()[1:]} / {notes_state}]")
+            item.setToolTip(f"{self.display_song_title(path)}\n{path.suffix.upper()[1:]} / {notes_state}\n{path}")
             item.setData(Qt.ItemDataRole.UserRole, str(path))
             self.song_list.addItem(item)
             if current and Path(current) == path:
                 self.song_list.setCurrentItem(item)
+        self.song_count.setText(f"SAVED MUSIC / {self.song_list.count()} SONGS")
         self.update_selected_panel()
 
     def select_song(self):

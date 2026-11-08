@@ -64,6 +64,8 @@ Graphify 리포트
 
 Windows 실행 파일 배포
 
+- [EXTRACTED: 여러 곡을 한눈에 보는 저장 음악 목록](audio/saved-music-flow.md)
+
 - EXTRACTED: 노트 속도 360을 포함한 배포 버전과 기존 설정 우선순위는 [Windows 배포 안내](../docs/windows-release.md)를 참고합니다.
 
 - [EXTRACTED: 노트 속도 기본값과 저장 설정](game/settings-system.md)
