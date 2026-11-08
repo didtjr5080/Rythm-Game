@@ -99,3 +99,4 @@ EXTRACTED: `docs/emg-device-setup.md`, `wiki/index.md`, `diagrams/input-flow.md`
 
 
 2026-11-08 ? EXTRACTED: five-lane finger-count mapping, strict serial input without keyboard fallback, rest-to-arm and single-hit contraction handling. Added docs/five-lane-input.md and regression checks; synchronized input-flow diagram. Hardware contraction accuracy remains to be verified.
+2026-11-08 — EXTRACTED: 사용자 실기 테스트 완료. 새 설치의 기본 EMG 신호를 envelope, 임계값을 12로 확인·통일하고 v2026.11.08.5 EXE 자체 검사에 기본값 검증을 추가했습니다. 기존 사용자 설정은 유지합니다.

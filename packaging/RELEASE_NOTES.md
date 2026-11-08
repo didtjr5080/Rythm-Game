@@ -1,3 +1,11 @@
+## Tested EMG calibration defaults
+
+- New installations use filtered activity (envelope) with threshold 12, matching the completed hardware test.
+- RAW ADC values are diagnostic; game judgments use the selected signal.
+- Existing saved settings take priority. Select Filtered activity and threshold 12 when updating an existing installation.
+- Includes five finger-count lanes, one hit per contraction, disconnected-input blocking, and Korean-path MediaPipe support.
+- Electrode placement and individual signal levels may require calibration in Settings.
+
 ## Five lanes and EMG input fixes
 
 - Any 1-5 extended fingers select lanes 1-5. A fist selects none; horizontal position no longer selects a lane.

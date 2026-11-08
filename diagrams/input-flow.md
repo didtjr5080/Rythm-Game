@@ -12,7 +12,7 @@ graph TD
     E[Keyboard Lane Fallback] --> D
     P[Settings: auto or chosen USB identity] --> Q[Discover and reconnect serial device]
     Q --> R[Verify firmware and parse framed samples]
-    R --> F[EMG Reader: raw or filtered]
+    R --> F[EMG Reader: selected signal; default filtered]
     F --> G[EMG Value]
     Q --> S[Disconnected: clear activation]
     S --> Q

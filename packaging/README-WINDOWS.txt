@@ -5,6 +5,8 @@ Keep _internal next to the EXE; copying only the EXE will not work.
 No Python installation is required. Music and personal runtime data are not bundled.
 
 Settings:
+- New-install EMG defaults: Filtered activity (envelope), threshold 12.
+- Existing saved settings take priority; check the signal type and threshold when updating.
 - Screen resolution: 1920x1080, 1440x900, and other listed sizes.
 - Enable real webcam; choose Camera 0-9; Connect / Test Camera; Save.
 - Camera frames may negotiate a lower capture size than requested.

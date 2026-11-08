@@ -97,6 +97,11 @@ def run_self_test(output_path):
         state.emg_activated = True
         assert engine.update(state,1000) == 'PERFECT'
         assert engine.update(state,1050) is None
+        from app.settings import DEFAULT_SETTINGS
+        assert DEFAULT_SETTINGS['emg_signal'] == 'envelope'
+        assert DEFAULT_SETTINGS['emg_threshold'] == config.EMG_THRESHOLD == 12
+        report['default_emg_signal'] = DEFAULT_SETTINGS['emg_signal']
+        report['default_emg_threshold'] = DEFAULT_SETTINGS['emg_threshold']
         report['lane_count'] = config.LANE_COUNT
         report['checks'].append('Five finger-count lanes, no hit without activation, one hit per contraction')
         report['ok'] = True
