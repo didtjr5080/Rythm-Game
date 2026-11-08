@@ -64,6 +64,8 @@ Graphify 리포트
 
 Windows 실행 파일 배포
 
+- [EXTRACTED: 노트 속도 기본값과 저장 설정](game/settings-system.md)
+
 - [EXTRACTED: EMG 장치 검색·선택·재연결 및 펌웨어 안내](../docs/emg-device-setup.md)
 
 - [EXTRACTED: Windows EXE 다운로드·빌드·검사 안내](../docs/windows-release.md)

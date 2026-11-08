@@ -14,7 +14,7 @@ DEFAULT_SETTINGS = {
     "camera_index": 0,
     "camera_resolution": "1280x720",
     "music_volume": 0.85,
-    "note_speed": 450,
+    "note_speed": 360,
     "judgement_line_y_ratio": 0.82,
     "emg_threshold": 400,
     "emg_input_mode": "serial",
