@@ -20,6 +20,9 @@ def run_self_test(output_path):
         from app.audio.audio_player import AudioPlayer
         from app.audio.note_generator_adapter import generate_notes_from_analysis
         from app import config
+        from app.settings import DEFAULT_SETTINGS
+        assert DEFAULT_SETTINGS['note_speed'] == config.NOTE_SPEED
+        report['default_note_speed'] = DEFAULT_SETTINGS['note_speed']
         from app.game.rhythm_game_engine import RhythmGameEngine
         app = QApplication.instance() or QApplication([])
         assert ICON_PATH.is_file() and not apply_app_icon(app).isNull()

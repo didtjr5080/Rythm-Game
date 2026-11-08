@@ -64,6 +64,8 @@ Graphify 리포트
 
 Windows 실행 파일 배포
 
+- EXTRACTED: 노트 속도 360을 포함한 배포 버전과 기존 설정 우선순위는 [Windows 배포 안내](../docs/windows-release.md)를 참고합니다.
+
 - [EXTRACTED: 노트 속도 기본값과 저장 설정](game/settings-system.md)
 
 - [EXTRACTED: EMG 장치 검색·선택·재연결 및 펌웨어 안내](../docs/emg-device-setup.md)

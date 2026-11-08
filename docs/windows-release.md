@@ -1,5 +1,7 @@
 # Windows 실행 파일 배포
 
+EXTRACTED: `v2026.11.08.2` 빌드는 노트 기본 속도 360을 포함합니다. 기존 설치 폴더의 설정을 유지하면 저장된 속도가 우선하므로 필요시 설정에서 360으로 변경합니다.
+
 EXTRACTED: `EMG-Motion-Rhythm.spec`과 `build_windows.ps1`은 Python 3.11 환경에서 Windows x64 폴더형 실행 파일을 만듭니다. Git에는 소스와 빌드 설정을 보관하고, 실행 파일 ZIP은 GitHub Releases에서 배포합니다.
 
 ## 실행
