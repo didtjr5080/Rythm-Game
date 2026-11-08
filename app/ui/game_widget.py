@@ -306,6 +306,7 @@ class GameWidget(QWidget):
         draw_frosted_glass_card(p,QRectF(42,320,250,220),'EMG BIO-SIGNAL')
         ratio=self.input_fusion.emg_mvc_ratio
         draw_circular_gauge(p,QRectF(88,357,157,157),ratio,f'{ratio*100:.0f}%','MVC ACTIVE')
+        text(p,QRectF(50,516,234,18),getattr(self.input_fusion.emg_reader,'status','MOCK EMG'),8,'#94A3B8')
         draw_frosted_glass_card(p,QRectF(940,70,300,245),'LIVE WEBCAM FEED & HAND TRACKING')
         view=QRectF(952,110,276,185)
         p.save(); clip=QPainterPath(); clip.addRoundedRect(view,8,8); p.setClipPath(clip)

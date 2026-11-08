@@ -26,12 +26,18 @@ class InputFusion:
     def __init__(
         self,
         use_camera: bool = config.USE_CAMERA,
-        use_mock_emg: bool = config.USE_MOCK_EMG,
+        use_mock_emg: bool | None = None,
         emg_threshold: int = config.EMG_THRESHOLD,
         camera_flip: bool = config.CAMERA_FLIP,
     ):
         self.tracker = MediaPipeHandTracker(flip=camera_flip) if use_camera else None
-        self.emg_reader = MockEMGReader(emg_threshold) if use_mock_emg else SerialEMGReader(threshold=emg_threshold)
+        from app.settings import load_settings
+        settings = load_settings()
+        if use_mock_emg is None:
+            use_mock_emg = config.USE_MOCK_EMG or settings['emg_input_mode'] == 'mock'
+        self.emg_reader = MockEMGReader(emg_threshold) if use_mock_emg else SerialEMGReader(
+            port=settings['emg_port'], baudrate=settings['emg_baudrate'], threshold=emg_threshold,
+            device_id=settings['emg_device_id'], signal=settings['emg_signal'])
         self.last_camera_frame = None
         self.latest_frame_rgb = None
         self.finger_states = None
@@ -85,8 +91,8 @@ class InputFusion:
         self.current_lane = state.lane
         self.hand_landmarks_norm = hand.get("landmarks")
         self.finger_states = hand.get("finger_states")
-        self.raw_emg_value = float(emg_value)
-        self.filtered_emg_value += .18 * (self.raw_emg_value - self.filtered_emg_value)
+        self.raw_emg_value = float(getattr(self.emg_reader, "raw_value", emg_value))
+        self.filtered_emg_value += .18 * (float(emg_value) - self.filtered_emg_value)
         self.emg_mvc_ratio = self.filtered_emg_value / max(1, self.emg_reader.threshold)
         self.latest_frame_rgb = None
         if self.last_camera_frame is not None:

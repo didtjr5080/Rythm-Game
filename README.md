@@ -116,6 +116,8 @@ graphify --help
 
 ## Windows EXE 다운로드와 빌드
 
+- [EMG 장치·펌웨어 설정](docs/emg-device-setup.md): USB 장치 자동 검색·수동 선택·연결 테스트·재연결과 지원 펌웨어를 설명합니다.
+
 - 실행 파일: [GitHub Releases](https://github.com/didtjr5080/Rythm-Game/releases)에서 Windows ZIP을 받고 전체 압축을 해제한 뒤 `EMG-Motion-Rhythm.exe`를 실행하세요. `_internal` 폴더를 함께 유지해야 합니다.
 - 직접 빌드: `.venv311/Scripts/python.exe -m pip install -r requirements-build.txt` 후 `powershell -ExecutionPolicy Bypass -File build_windows.ps1`을 실행합니다.
 - [Windows 배포 안내](docs/windows-release.md)에 실행 방법, 카메라·고해상도 설정, EXE 자체 검사와 저장 위치를 정리했습니다.

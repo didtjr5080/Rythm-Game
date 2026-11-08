@@ -59,7 +59,7 @@ class CalibrationScreen(AuroraScreen):
         state,_=self.fusion.read(frame)
         self.plot.raw.append(self.fusion.raw_emg_value); self.plot.filtered.append(self.fusion.filtered_emg_value); self.plot.update()
         self.value_label.setText(f'{state.emg_value:.0f} EMG')
-        self.state_label.setText('MUSCLE ACTIVE' if state.emg_activated else 'RESTING')
+        self.state_label.setText(('MUSCLE ACTIVE / ' if state.emg_activated else 'RESTING / ')+getattr(self.reader,'status','MOCK EMG'))
         self.bio.camera_pixmap=rgb_pixmap(self.fusion.latest_frame_rgb)
         self.bio.hand_diagnostic=f"FINGERS: {state.finger_count if state.finger_count is not None else '--'} / {state.hand_label or '--'} / {state.tracker_status or '--'}"
         self.bio.finger_states=self.fusion.finger_states

@@ -6,7 +6,12 @@ graph TD
     B --> C[Finger Count Lane]
     C --> D[Lane Selection]
     E[Keyboard Lane Fallback] --> D
-    F[EMG Reader] --> G[EMG Value]
+    P[Settings: auto or chosen USB identity] --> Q[Discover and reconnect serial device]
+    Q --> R[Verify firmware and parse framed samples]
+    R --> F[EMG Reader: raw or filtered]
+    F --> G[EMG Value]
+    Q --> S[Disconnected: clear activation]
+    S --> Q
     G --> H{Threshold}
     H --> I[Activation]
     D --> J[InputFusion State]

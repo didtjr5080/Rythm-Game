@@ -44,7 +44,8 @@ class MainWindow(QMainWindow):
         bio=getattr(current,'bio',None)
         if bio is not None and hasattr(bio,'stop_live'): bio.stop_live()
         if isinstance(current,CalibrationScreen): current.stop()
-        if isinstance(current,SettingsScreen): current.stop_camera_preview()
+        if isinstance(current,SettingsScreen):
+            current.stop_emg_test(); current.device_timer.stop(); current.stop_camera_preview()
 
     def closeEvent(self,event):
         self._release_current_inputs()

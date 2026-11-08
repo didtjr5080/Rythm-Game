@@ -17,6 +17,11 @@ DEFAULT_SETTINGS = {
     "note_speed": 450,
     "judgement_line_y_ratio": 0.82,
     "emg_threshold": 400,
+    "emg_input_mode": "serial",
+    "emg_port": "auto",
+    "emg_device_id": "",
+    "emg_baudrate": 115200,
+    "emg_signal": "envelope",
 }
 
 CAMERA_RESOLUTIONS = ("640x480", "1280x720", "1920x1080")
@@ -69,6 +74,12 @@ def load_settings() -> dict:
         return dict(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings.update({key: data[key] for key in DEFAULT_SETTINGS if key in data})
+    for key, choices, default in (("emg_input_mode", ("serial", "mock"), "serial"),
+                                  ("emg_signal", ("envelope", "raw"), "envelope"),
+                                  ("emg_baudrate", (9600, 57600, 115200), 115200)):
+        if settings[key] not in choices: settings[key] = default
+    for key, default in (("emg_port", "auto"), ("emg_device_id", "")):
+        if not isinstance(settings[key], str) or len(settings[key])>256: settings[key] = default
     settings["camera_enabled"] = bool(settings["camera_enabled"])
     try:
         settings["camera_index"] = max(0, min(9, int(settings["camera_index"])))
@@ -93,6 +104,12 @@ def load_settings() -> dict:
 def save_settings(settings: dict) -> dict:
     merged = dict(DEFAULT_SETTINGS)
     merged.update({key: settings[key] for key in DEFAULT_SETTINGS if key in settings})
+    for key, choices, default in (("emg_input_mode", ("serial", "mock"), "serial"),
+                                  ("emg_signal", ("envelope", "raw"), "envelope"),
+                                  ("emg_baudrate", (9600, 57600, 115200), 115200)):
+        if merged[key] not in choices: merged[key] = default
+    for key, default in (("emg_port", "auto"), ("emg_device_id", "")):
+        if not isinstance(merged[key], str) or len(merged[key])>256: merged[key] = default
     merged["camera_enabled"] = bool(merged["camera_enabled"])
     try:
         merged["camera_index"] = max(0, min(9, int(merged["camera_index"])))

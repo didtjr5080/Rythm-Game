@@ -71,3 +71,10 @@ AMBIGUOUS: 물리 카메라·시리얼·스피커 조합의 실제 동작은 별
 
 EXTRACTED: 사용자 제공 손 엠블럼 PNG를 원본 그대로 추가하고 투명 다중 크기 ICO로 변환했습니다. `app/ui/app_icon.py`, `app/main.py`, `EMG-Motion-Rhythm.spec`에서 Windows 앱 식별자·창·작업 표시줄·EXE 아이콘을 연결했습니다.
 EXTRACTED: `build_windows.ps1`의 아이콘 생성 단계와 `app/diagnostics.py`의 리소스 검사를 추가하고 `docs/windows-release.md` 및 `wiki/index.md`에 변환·적용 경로를 정리했습니다. 게임 데이터 흐름의 변경이 없어 기존 Mermaid 다이어그램은 유지합니다.
+
+2026-11-08 — EMG 펌웨어 및 장치 선택
+
+EXTRACTED: 설정에 EMG 장치 검색·선택·USB 식별자 저장·연결 테스트·재연결·원시/처리 신호 선택을 추가했습니다. Nano 및 ESP8266 A0 펌웨어는 컴파일을 통과했습니다. COM5의 칩 식별 결과는 ESP8266EX입니다.
+EXTRACTED: 이후 사용자가 A0를 찾고 SZH-GJD001 모델과 3V3 전원을 확인했습니다. COM5 ESP8266EX에 펌웨어를 업로드하고 플래시 해시와 실제 식별·데이터 프레임 수신을 검증했습니다. 기존 플래시 첫 512KiB는 로컬 빌드 폴더에만 백업합니다.
+AMBIGUOUS: 실제 보드의 ADC 허용 전압과 근육 수축 시 활성 임계값 검증은 별도 확인이 필요합니다.
+EXTRACTED: `docs/emg-device-setup.md`, `wiki/index.md`, `diagrams/input-flow.md`에 확인된 사실과 남은 확인 사항을 분리해 기록했습니다.

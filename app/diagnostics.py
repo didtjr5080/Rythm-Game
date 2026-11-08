@@ -58,6 +58,11 @@ def run_self_test(output_path):
         from app.ui.settings_screen import SettingsScreen
         from app.ui.calibration_screen import CalibrationScreen
         from app.ui.result_screen import ResultScreen
+        from app.input.emg_reader import SerialEMGReader
+        from app.input.emg_devices import discover_emg_devices
+        assert SerialEMGReader.parse_packet('EMG1 raw:512 filtered:40 seq:2') == (512,40,2)
+        assert SerialEMGReader.parse_packet('EMG1 raw:9999 filtered:40 seq:2') is None
+        report['checks'].append('EMG device discovery imports and framed serial protocol parser')
         report['checks'].append('All desktop screen imports and audio output library')
         report['ok'] = True
     except Exception:
