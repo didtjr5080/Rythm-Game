@@ -1,5 +1,7 @@
 Rythm-Game 위키
 
+- [5레인과 EMG 입력 수정](../docs/five-lane-input.md) — EXTRACTED: 손가락 개수 매핑, 실제 입력 차단, 수축당 한 번 판정.
+
 이 위키는 기존 EMG Motion Rhythm 프로젝트를 문서화합니다.
 
 이 위키의 목적은 구현된 게임을 변경하지 않고 현재 프로젝트 구조, 입력 흐름, 게임 루프, 오디오/노트 흐름, 시각화 리소스를 설명하는 것입니다.
@@ -63,6 +65,8 @@ EMG 입력 오류
 Graphify 리포트
 
 Windows 실행 파일 배포
+
+- [EXTRACTED: 다른 PC·한글 경로의 MediaPipe 진단과 수정](../docs/mediapipe-portability.md)
 
 - [EXTRACTED: 여러 곡을 한눈에 보는 저장 음악 목록](audio/saved-music-flow.md)
 

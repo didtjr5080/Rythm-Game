@@ -20,7 +20,7 @@ from app.input.camera import CameraSource, draw_camera_frame
 from app.ui.theme import (draw_aurora_background, draw_frosted_glass_card, draw_crystal_note,
     draw_circular_gauge, draw_hand_skeleton_overlay, draw_waveform, text, finger_summary)
 
-LANE_NAMES = ["LEFT", "CENTER", "RIGHT"]
+LANE_NAMES = [str(i+1) for i in range(config.LANE_COUNT)]
 
 
 class GameWidget(QWidget):
@@ -124,7 +124,7 @@ class GameWidget(QWidget):
         self.raw_history.append(self.input_fusion.raw_emg_value)
         self.filtered_history.append(self.input_fusion.filtered_emg_value)
         if input_state.emg_activated and not self.previous_activation:
-            self.ripples.append((current_time_ms, input_state.lane if input_state.lane is not None else 1))
+            self.ripples.append((current_time_ms, input_state.lane if input_state.lane is not None else config.LANE_COUNT//2))
         self.previous_activation = input_state.emg_activated
         self.ripples = [(t,l) for t,l in self.ripples if current_time_ms-t<800]
         if self.song_path and self.audio_player.loading:
@@ -186,6 +186,10 @@ class GameWidget(QWidget):
     def eventFilter(self, watched, event):
         if self.finished:
             return False
+        if event.type() in (QEvent.Type.ApplicationDeactivate, QEvent.Type.WindowDeactivate):
+            self.input_fusion.set_space_pressed(False)
+        if event.type() in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease) and event.isAutoRepeat():
+            return event.key() in self._handled_keys()
         if event.type() == QEvent.Type.KeyPress:
             self._handle_key(event.key(), True)
             return event.key() in self._handled_keys()
@@ -197,6 +201,7 @@ class GameWidget(QWidget):
     @staticmethod
     def _handled_keys():
         return {
+            Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4, Qt.Key.Key_5,
             Qt.Key.Key_Space,
             Qt.Key.Key_Escape,
             Qt.Key.Key_Left,
@@ -226,9 +231,11 @@ class GameWidget(QWidget):
         elif key in (Qt.Key.Key_Left, Qt.Key.Key_A):
             self.manual_lane = 0
         elif key in (Qt.Key.Key_Down, Qt.Key.Key_S):
-            self.manual_lane = 1
+            self.manual_lane = config.LANE_COUNT//2
         elif key in (Qt.Key.Key_Right, Qt.Key.Key_D):
-            self.manual_lane = 2
+            self.manual_lane = config.LANE_COUNT-1
+        elif Qt.Key.Key_1 <= key <= Qt.Key.Key_5:
+            self.manual_lane = key - Qt.Key.Key_1
         elif key == Qt.Key.Key_V:
             self.ar_camera = not self.ar_camera
         elif key == Qt.Key.Key_F:
@@ -253,18 +260,18 @@ class GameWidget(QWidget):
             t=(y-top)/(bottom-top)
             return 640-(90+320*t), 640+(90+320*t)
         def lane_x(y,lane):
-            left,right=edge(y); return left+(right-left)*(lane+.5)/3
+            left,right=edge(y); return left+(right-left)*(lane+.5)/config.LANE_COUNT
         g=QLinearGradient(0,top,0,bottom); g.setColorAt(0,QColor(16,24,39,25)); g.setColorAt(1,QColor(70,90,105,165))
         poly=QPolygonF([QPointF(550,top),QPointF(730,top),QPointF(1050,bottom),QPointF(230,bottom)])
         p.setBrush(g); p.setPen(QPen(QColor(210,240,240,90),2)); p.drawPolygon(poly)
         lane=self.current_input.lane
         if lane is not None:
-            left,right=edge(bottom); tw=180/3; bw=(right-left)/3
+            left,right=edge(bottom); tw=180/config.LANE_COUNT; bw=(right-left)/config.LANE_COUNT
             beam=QLinearGradient(0,top,0,bottom); beam.setColorAt(0,QColor(16,185,129,0)); beam.setColorAt(1,QColor(16,185,129,55))
             p.setBrush(beam); p.setPen(Qt.PenStyle.NoPen); p.drawPolygon(QPolygonF([QPointF(550+tw*lane,top),QPointF(550+tw*(lane+1),top),QPointF(left+bw*(lane+1),bottom),QPointF(left+bw*lane,bottom)]))
-        for i in range(4):
-            p.setPen(QPen(QColor('#6EE7B7' if i==0 else '#C4B5FD') if i in (0,3) else QColor(200,220,230,55),2 if i in (0,3) else 1))
-            p.drawLine(QPointF(550+i*60,top),QPointF(230+i*820/3,bottom))
+        for i in range(config.LANE_COUNT+1):
+            p.setPen(QPen(QColor('#6EE7B7' if i==0 else '#C4B5FD') if i in (0,config.LANE_COUNT) else QColor(200,220,230,55),2 if i in (0,config.LANE_COUNT) else 1))
+            p.drawLine(QPointF(550+i*180/config.LANE_COUNT,top),QPointF(230+i*820/config.LANE_COUNT,bottom))
         judge_y=720*float(self.settings['judgement_line_y_ratio'])
         left,right=edge(judge_y)
         laser=QLinearGradient(left,0,right,0); laser.setColorAt(0,QColor('#6EE7B7')); laser.setColorAt(1,QColor('#C4B5FD'))
@@ -297,8 +304,11 @@ class GameWidget(QWidget):
         if self.song_path:
             status = self.audio_player.error or ('LOADING AUDIO...' if self.audio_player.loading else f'{self.audio_player.position_ms/1000:.0f}s / {self.audio_player.duration_seconds:.0f}s')
             text(p,QRectF(320,626,640,22),status,10,'#94A3B8')
-        text(p,QRectF(300,654,680,24),self.camera_source.status+' / 1=LEFT  2=CENTER  3=RIGHT  4/5=HAND POSITION',9,'#94A3B8')
-        text(p,QRectF(280,687,720,24),'A / S / D  /  SPACE: EMG  /  F: FLIP  /  V: AR CAMERA',10,'#94A3B8')
+        text(p,QRectF(300,654,680,24),self.camera_source.status+' / 1-5 FINGERS = LANES 1-5 / FIST = NO LANE',9,'#94A3B8')
+        tracker=self.input_fusion.tracker
+        if tracker and not tracker.backend_is_mediapipe:
+            text(p,QRectF(340,35,600,48),'MEDIAPIPE INACTIVE / CHECK CAMERA TEST IN SETTINGS',13,'#FB923C')
+        text(p,QRectF(280,687,720,24),'1-5: LANE / SPACE: DEMO ONLY  /  F: FLIP  /  V: AR CAMERA',10,'#94A3B8')
 
     def _draw_lab_hud(self,p):
         draw_frosted_glass_card(p,QRectF(42,100,282,190),'EMG DSP FILTER & THRESHOLD')
@@ -321,8 +331,8 @@ class GameWidget(QWidget):
         if landmarks or self.camera_pixmap is None:
             draw_hand_skeleton_overlay(p,image_bounds if landmarks and self.camera_pixmap is not None else view.adjusted(20,5,-20,-20),landmarks,time.monotonic(),finger_states=self.input_fusion.finger_states)
         lane=self.current_input.lane
-        for i in range(3):
-            cell=QRectF(view.x()+i*view.width()/3,view.y(),view.width()/3,view.height())
+        for i in range(config.LANE_COUNT):
+            cell=QRectF(view.x()+i*view.width()/config.LANE_COUNT,view.y(),view.width()/config.LANE_COUNT,view.height())
             p.setBrush(Qt.BrushStyle.NoBrush); p.setPen(QPen(QColor('#6EE7B7') if i==lane else QColor(255,255,255,40),2 if i==lane else 1)); p.drawRect(cell)
             text(p,QRectF(cell.x(),cell.bottom()-22,cell.width(),20),LANE_NAMES[i],8)
         p.restore()

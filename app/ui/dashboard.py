@@ -14,7 +14,7 @@ class Instrument(QWidget):
         super().__init__(parent)
         self.compact=False
         self.kind=kind; self.metrics={}; self.analysis={}; self.notes=[]
-        self.finger_states=None; self.hand_diagnostic=''; self.camera_pixmap=None; self.landmarks=None; self.threshold=400; self.ratio=0; self.sensor_status='PREVIEW // NOT CONNECTED'
+        self.tracker_warning=''; self.finger_states=None; self.hand_diagnostic=''; self.camera_pixmap=None; self.landmarks=None; self.threshold=400; self.ratio=0; self.sensor_status='PREVIEW // NOT CONNECTED'
         self.setMinimumSize(180,230)
         self.timer=QTimer(self); self.timer.timeout.connect(self.update)
         self.timer.start(50)
@@ -37,6 +37,8 @@ class Instrument(QWidget):
         self.camera_pixmap=rgb_pixmap(self.fusion.latest_frame_rgb)
         self.hand_diagnostic=f"FINGERS: {state.finger_count if state.finger_count is not None else '--'} / {state.hand_label or '--'} / {state.tracker_status or '--'}"
         self.finger_states=self.fusion.finger_states
+        tracker=self.fusion.tracker
+        self.tracker_warning=tracker.diagnostic_summary if tracker and not tracker.backend_is_mediapipe else ''
         self.landmarks=self.fusion.hand_landmarks_norm
         reader=self.fusion.emg_reader
         connected=hasattr(reader,'serial') and reader.serial is not None
@@ -89,7 +91,7 @@ class Instrument(QWidget):
         p.setPen(QPen(QColor('#6EE7B7'),1)); p.drawLine(12,325,288,325)
         total=len(self.notes)
         for i,note in enumerate(self.notes[:18]):
-            x=18+(i*43)%258; y=300+(note.lane-1)*15
+            x=18+(i*43)%258; y=300+(note.lane-2)*12
             draw_crystal_note(p,QRectF(x,y,13,12),note.lane==2)
         duration=self.analysis.get('duration',0)
         density=total/duration if duration else None
@@ -124,4 +126,4 @@ class Instrument(QWidget):
         text(p,QRectF(10,231,280,18),finger_summary(self.finger_states),9,'#94A3B8')
         draw_circular_gauge(p,QRectF(72,250,156,146),self.threshold/580,str(self.threshold),'EMG THRESHOLD')
         text(p,QRectF(0,235,65,22),'0',9,'#94A3B8'); text(p,QRectF(237,235,60,22),'580',9,'#94A3B8')
-        text(p,QRectF(0,397,300,23),self.sensor_status,8,'#6EE7B7')
+        text(p,QRectF(0,397,300,23),self.sensor_status if not self.tracker_warning else 'MEDIAPIPE INACTIVE / CHECK CAMERA TEST',8,'#FB923C' if self.tracker_warning else '#6EE7B7')

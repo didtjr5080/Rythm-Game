@@ -63,7 +63,7 @@ EMG_DEVICE:ESP8266_A0:1
 EMG1 raw:512 filtered:40 seq:2
 ```
 
-EXTRACTED: `EMG?` 명령으로 식별 응답을 요청하고 `ZERO`로 기준 수집을 다시 시작할 수 있습니다. Nano 식별자는 `NANO_A0`입니다. 수신기는 부분 프레임·잘못된 범위·시퀀스 숫자의 오인식을 처리하고, 같은 화면 갱신 사이에 발생한 임계값 초과도 포착합니다.
+EXTRACTED: `EMG?` 명령으로 식별 응답을 요청하고 `ZERO`로 기준 수집을 다시 시작할 수 있습니다. Nano 식별자는 `NANO_A0`입니다. 수신기는 부분 프레임·잘못된 범위·시퀀스 숫자의 오인식을 처리합니다. 휴식 샘플 4개 후 연속 초과 샘플 2개로 수축을 확인하며, 단일 잡음 피크는 입력하지 않습니다. [5레인과 입력 정책](five-lane-input.md)을 참조하세요.
 
 ```powershell
 .venv311/Scripts/python.exe WorkOrder/verify_emg_serial.py

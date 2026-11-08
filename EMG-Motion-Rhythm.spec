@@ -1,6 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+from pathlib import Path
+import os
+
+runtime_dir = Path(os.environ.get("SystemRoot", "C:/Windows")) / "System32"
+cpp_runtimes = [(str(runtime_dir/name), ".") for name in (
+    "MSVCP140.dll", "MSVCP140_1.dll", "MSVCP140_2.dll", "CONCRT140.dll",
+    "VCRUNTIME140.dll", "VCRUNTIME140_1.dll") if (runtime_dir/name).is_file()]
 
 mediapipe_datas = collect_data_files(
     'mediapipe',
@@ -21,7 +28,7 @@ mediapipe_hiddenimports = [
 a = Analysis(
     ['app\\main.py'],
     pathex=['legacy_web/backend'],
-    binaries=mediapipe_binaries,
+    binaries=mediapipe_binaries + cpp_runtimes,
     datas=[('app/data/songs/.gitkeep', 'app/data/songs'), ('app/assets', 'app/assets')] + mediapipe_datas,
     hiddenimports=mediapipe_hiddenimports + ['audio_analyzer', 'note_generator'],
     hookspath=[],
@@ -43,6 +50,10 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+# Keep all copies of the C++ runtime consistent; Qt wheels may ship older ones.
+_runtime_names = {Path(source).name.lower(): source for source, _ in cpp_runtimes}
+a.binaries = [(destination, _runtime_names.get(Path(destination).name.lower(), source), kind)
+              for destination, source, kind in a.binaries]
 pyz = PYZ(a.pure)
 
 exe = EXE(

@@ -1,6 +1,8 @@
 """Packaged executable self-test without camera, serial or speaker access."""
 import json
 import tempfile
+import shutil
+import sys
 from pathlib import Path
 
 
@@ -13,7 +15,8 @@ def run_self_test(output_path):
         import audio_analyzer
         import note_generator
         from PyQt6.QtWidgets import QApplication
-        from app.input.mediapipe_tracker import MediaPipeHandTracker
+        from app.input.mediapipe_tracker import MediaPipeHandTracker, preload_mediapipe
+        from app.input.mediapipe_runtime import create_hands, cpp_runtime_origin, MODEL_FOLDERS
         from app.ui.theme import APP_STYLE, font_families
         from app.ui.dashboard import Instrument
         from app.ui.app_icon import apply_app_icon, ICON_PATH
@@ -33,10 +36,26 @@ def run_self_test(output_path):
         tracker = MediaPipeHandTracker()
         try:
             assert tracker.available, tracker.last_error
+            report['model_path_ascii'] = str(tracker.model_root).isascii()
+            report['cpp_runtime'] = cpp_runtime_origin()
+            if getattr(sys, 'frozen', False) and sys.platform=='win32':
+                assert report['cpp_runtime'] not in ('external-system-runtime','not-loaded')
             assert not tracker.track(np.zeros((240,320,3),dtype=np.uint8))['hand_visible']
         finally:
             tracker.close()
         report['checks'].append('MediaPipe Hands native model inference with Qt')
+        with tempfile.TemporaryDirectory() as folder:
+            mp=preload_mediapipe()
+            unicode_root=Path(folder)/'\ud55c\uae00 \uacbd\ub85c'
+            for name in MODEL_FOLDERS:
+                shutil.copytree(Path(mp.__file__).parent/'modules'/name,unicode_root/'mediapipe'/'modules'/name)
+            hands, model_root=create_hands(mp,resource_root=unicode_root)
+            try:
+                assert not hands.process(np.zeros((240,320,3),dtype=np.uint8)).multi_hand_landmarks
+            finally:
+                hands.close()
+            report['unicode_model_inference']=True
+        report['checks'].append('Unicode model path native inference')
         for size in ((1920,1080),(1440,900)):
             widget = Instrument('performance')
             widget.resize(*size)
@@ -54,7 +73,7 @@ def run_self_test(output_path):
             analysis = audio_analyzer.analyze_audio(str(wav))
             assert abs(analysis['duration']-6)<.01
             notes = generate_notes_from_analysis(analysis)
-            assert notes and all(0<=n['lane']<3 for n in notes)
+            assert notes and all(0<=n['lane']<config.LANE_COUNT for n in notes)
         report['checks'].append('Full audio decode, librosa analysis, legacy note generation')
         from app.ui.game_widget import GameWidget
         from app.ui.start_screen import StartScreen
@@ -67,6 +86,19 @@ def run_self_test(output_path):
         assert SerialEMGReader.parse_packet('EMG1 raw:9999 filtered:40 seq:2') is None
         report['checks'].append('EMG device discovery imports and framed serial protocol parser')
         report['checks'].append('All desktop screen imports and audio output library')
+        from app.game.rhythm_game_engine import RhythmGameEngine
+        from app.game.note import Note
+        from app.input.input_fusion import GameInputState
+        assert config.LANE_COUNT == 5
+        assert [MediaPipeHandTracker.finger_count_to_lane(i) for i in range(6)] == [None,0,1,2,3,4]
+        engine = RhythmGameEngine([Note(0,4,1000), Note(1,4,1050)])
+        state = GameInputState(4,0,False,True,.5,.5,5,0)
+        assert engine.update(state,990) is None
+        state.emg_activated = True
+        assert engine.update(state,1000) == 'PERFECT'
+        assert engine.update(state,1050) is None
+        report['lane_count'] = config.LANE_COUNT
+        report['checks'].append('Five finger-count lanes, no hit without activation, one hit per contraction')
         report['ok'] = True
     except Exception:
         import traceback

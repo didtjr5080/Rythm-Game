@@ -63,6 +63,8 @@ class CalibrationScreen(AuroraScreen):
         self.bio.camera_pixmap=rgb_pixmap(self.fusion.latest_frame_rgb)
         self.bio.hand_diagnostic=f"FINGERS: {state.finger_count if state.finger_count is not None else '--'} / {state.hand_label or '--'} / {state.tracker_status or '--'}"
         self.bio.finger_states=self.fusion.finger_states
+        tracker=self.fusion.tracker
+        self.bio.tracker_warning=tracker.diagnostic_summary if tracker and not tracker.backend_is_mediapipe else ''
         self.bio.landmarks=self.fusion.hand_landmarks_norm
         mock=not hasattr(self.reader,'serial') or self.reader.serial is None
         self.bio.sensor_status=self.camera_source.status+' / '+('TRACKED' if self.bio.landmarks else 'NO HAND')

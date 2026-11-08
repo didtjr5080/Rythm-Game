@@ -133,7 +133,7 @@ class StartScreen(AuroraScreen):
         layout.addWidget(self.selected_title)
         layout.addWidget(self.selected_meta)
         stat_row = QHBoxLayout()
-        for label in (self.selected_notes, self._small_stat("LANES", "3"), self._small_stat("INPUT", "FINGER + EMG")):
+        for label in (self.selected_notes, self._small_stat("LANES", "5"), self._small_stat("INPUT", "FINGER + EMG")):
             stat_row.addWidget(label)
         stat_row.addStretch(1)
         layout.addLayout(stat_row)

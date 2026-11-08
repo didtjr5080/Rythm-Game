@@ -8,10 +8,12 @@ Settings:
 - Screen resolution: 1920x1080, 1440x900, and other listed sizes.
 - Enable real webcam; choose Camera 0-9; Connect / Test Camera; Save.
 - Camera frames may negotiate a lower capture size than requested.
-- 1 finger = LEFT, 2 = CENTER, 3 = RIGHT, 4/5 = horizontal hand position.
+- Any combination of 1-5 extended fingers selects lane 1-5; a fist selects none.
 - T/I/M/R/P labels identify thumb/index/middle/ring/pinky.
 - Green means extended; orange means folded.
-- A/S/D or arrow keys select lanes without tracking; SPACE tests mock EMG.
+- Number keys 1-5 select lanes without tracking; SPACE works only in explicit mock mode.
+- Real EMG mode never falls back to keyboard input when disconnected.
+- Relax before each contraction; holding one contraction scores at most one note.
 - F flips the camera; V toggles the AR camera background.
 
 Add a local MP3/WAV/OGG, load it, and generate notes before playing.

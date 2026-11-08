@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from app import config
@@ -11,12 +12,13 @@ class RhythmGameEngine:
     def __init__(self, notes: list[Note] | None = None):
         self.notes = notes or self.generate_sample_notes()
         self.score_state = ScoreState()
+        self._previous_activation = False
         self.last_result = ""
         self.last_judged_note_index = -1
 
     @staticmethod
     def generate_sample_notes() -> list[Note]:
-        lanes = [0, 1, 2, 1, 0, 2, 1, 0, 2, 1, 0, 2]
+        lanes = [0, 1, 2, 3, 4, 3, 2, 1, 0, 2, 4, 1]
         return [Note(note_id=i, lane=lane, hit_time_ms=2500 + i * 950) for i, lane in enumerate(lanes)]
 
     @staticmethod
@@ -34,7 +36,13 @@ class RhythmGameEngine:
         with open(path, "r", encoding="utf-8") as handle:
             payload = json.load(handle)
         raw_notes = payload.get("notes", payload) if isinstance(payload, dict) else payload
+        source_lanes = payload.get("lane_count", 3) if isinstance(payload, dict) else 3
+        if any(int(item.get("lane", 0)) >= 3 for item in raw_notes):
+            source_lanes = config.LANE_COUNT
         notes = [cls.normalize_note_dict(item, i) for i, item in enumerate(raw_notes)]
+        if source_lanes == 3 and config.LANE_COUNT == 5:
+            for note in notes:
+                note.lane *= 2
         return cls(notes=notes or cls.generate_sample_notes())
 
     def visible_notes(
@@ -56,6 +64,10 @@ class RhythmGameEngine:
         return visible
 
     def update(self, input_state, current_time_ms: int):
+        active = bool(input_state.emg_activated)
+        triggered = active and not self._previous_activation
+        self._previous_activation = active
+        input_state = replace(input_state, emg_activated=triggered)
         result = None
         for index, note in enumerate(self.notes):
             if note.judged:

@@ -36,7 +36,7 @@ for mask in range(32):
 assert Tracker.finger_count_to_lane(1)==0
 assert Tracker.finger_count_to_lane(2)==1
 assert Tracker.finger_count_to_lane(3)==2
-assert Tracker.finger_count_to_lane(5) is None
+assert Tracker.finger_count_to_lane(5)==4
 
 # The alternate mirrored detection candidate must map its landmarks back to display space.
 tracker=Tracker.__new__(Tracker)
@@ -51,7 +51,7 @@ with patch.object(tracker,'_process_candidates',return_value=(result,frame,True)
     detected=tracker.track(frame)
 assert detected['finger_count']==5 and detected['hand_label']=='Right'
 assert detected['landmarks'][8][0]==1-raw[8].x
-assert detected['lane']==Tracker.x_to_lane(detected['x'])
+assert detected['lane']==4
 with patch.object(tracker,'_process_candidates',return_value=(None,frame,False)):
     assert not tracker.track(frame)['hand_visible']
 print('PASS: all 32 finger combinations at 5 rotations and both mirrors; handedness invariance; aspect correction; mirrored overlay; lane mapping; no-hand detection')

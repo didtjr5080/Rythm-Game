@@ -11,6 +11,8 @@ def preload_mediapipe():
         return None
     if _mediapipe is None and _mediapipe_error is None:
         try:
+            from app.input.mediapipe_runtime import prepare_native_runtime
+            prepare_native_runtime()
             import mediapipe
             _mediapipe = mediapipe
         except Exception as exc:
@@ -25,6 +27,8 @@ class MediaPipeHandTracker:
         self.hands = None
         self.status = "starting"
         self.last_error = None
+        self.initialization_error = None
+        self.model_root = None
         self._selected_hand = None
         self._stable_fingers = None
         self._pending_fingers = None
@@ -37,7 +41,8 @@ class MediaPipeHandTracker:
                 raise ImportError(_mediapipe_error or 'MediaPipe is disabled')
 
             self.mp_hands = mp.solutions.hands
-            self.hands = self.mp_hands.Hands(
+            from app.input.mediapipe_runtime import create_hands
+            self.hands, self.model_root = create_hands(mp,
                 static_image_mode=False,
                 max_num_hands=2,
                 min_detection_confidence=config.HAND_DETECTION_CONFIDENCE,
@@ -48,11 +53,23 @@ class MediaPipeHandTracker:
         except ImportError as exc:
             self.status = "missing"
             self.last_error = f"{type(exc).__name__}: {exc}"
+            self.initialization_error = self.last_error
             print(f"MediaPipe import failed: {self.last_error}")
         except Exception as exc:
             self.status = "error"
             self.last_error = str(exc)
+            self.initialization_error = f"{type(exc).__name__}: {exc}"
             print(f"MediaPipe hand tracker could not start: {exc}")
+
+    @property
+    def backend_is_mediapipe(self):
+        return self.available and not self.status.startswith('opencv') and self.status != 'error'
+
+    @property
+    def diagnostic_summary(self):
+        if self.backend_is_mediapipe:
+            return 'MEDIAPIPE READY / ' + self.status
+        return 'MEDIAPIPE INACTIVE / ' + (self.initialization_error or self.last_error or 'disabled') + ' / APPROXIMATE OPENCV FALLBACK'
 
     def track(self, frame):
         if frame is None:
@@ -127,8 +144,6 @@ class MediaPipeHandTracker:
             chosen['finger_states'] = self._stabilize_fingers(chosen['raw_finger_states'])
             chosen['finger_count'] = sum(chosen['finger_states'].values())
             chosen['lane'] = self.finger_count_to_lane(chosen['finger_count'])
-            if chosen['lane'] is None:
-                chosen['lane'] = self.x_to_lane(chosen['x'])
             return chosen
         except Exception as exc:
             self.status = "error"
@@ -186,8 +201,6 @@ class MediaPipeHandTracker:
             hand_y = max(0.0, min(1.0, cy / height))
             finger_count = self._estimate_fingers_from_contour(cv2, contour)
             lane = self.finger_count_to_lane(finger_count)
-            if lane is None:
-                lane = self.x_to_lane(hand_x)
 
             self.status = "opencv fallback"
             return {
@@ -442,13 +455,7 @@ class MediaPipeHandTracker:
 
     @staticmethod
     def finger_count_to_lane(count: int | None):
-        if count == 1:
-            return 0
-        if count == 2:
-            return 1
-        if count == 3:
-            return 2
-        return None
+        return count - 1 if count is not None and 1 <= count <= 5 else None
 
     def set_flip(self, enabled: bool):
         self.flip = enabled

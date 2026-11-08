@@ -90,4 +90,12 @@ EXTRACTED: 재빌드한 EXE 자체 검사가 통과했으며 검사 결과의 `d
 2026-11-08 — 음악 목록 표시 개선
 
 EXTRACTED: `app/ui/start_screen.py`에서 목록 높이 제한을 없애고 행을 압축했으며 곡 수·긴 제목 툴팁을 추가했습니다. `app/ui/dashboard.py`에는 로비용 소형 곡 분석 요약을 적용했습니다. 20곡으로 1280×720의 7곡, 1440×900의 14곡, 1920×1080의 20곡 표시와 선택·불러오기를 확인했습니다. 배포 문서와 위키에 변경 내용을 정리했습니다. 데이터 흐름이 바뀌지 않아 기존 다이어그램은 유지합니다.
+
+2026-11-08 — MediaPipe 한글 경로·배포 호환성
+
+EXTRACTED: 한글 경로의 모델 로딩 실패를 재현하고 영문 모델 경로 확보·모델 캐시 복구를 추가했습니다. C++ 런타임 사본과 로딩 순서를 보완하고 카메라 테스트 및 게임 화면에 대체 인식과 초기화 오류를 표시했습니다. `WorkOrder/verify_mediapipe_portability.py`와 기존 손가락·UI 검증을 통과했습니다. 관련 문서·위키·입력 다이어그램을 갱신했습니다.
+INFERRED: 사용자의 다른 PC 문제와 같은 원인일 가능성이 있으나 그 PC의 오류 로그로 확정하지 않았습니다.
 EXTRACTED: `docs/emg-device-setup.md`, `wiki/index.md`, `diagrams/input-flow.md`에 확인된 사실과 남은 확인 사항을 분리해 기록했습니다.
+
+
+2026-11-08 ? EXTRACTED: five-lane finger-count mapping, strict serial input without keyboard fallback, rest-to-arm and single-hit contraction handling. Added docs/five-lane-input.md and regression checks; synchronized input-flow diagram. Hardware contraction accuracy remains to be verified.

@@ -1,4 +1,14 @@
+## Five lanes and EMG input fixes
+
+- Any 1-5 extended fingers select lanes 1-5. A fist selects none; horizontal position no longer selects a lane.
+- Real serial mode disables input when disconnected, never silently substitutes SPACE.
+- Rest-to-arm, noise confirmation, fresh-sample checks and one hit per contraction prevent repeated activation.
+- Existing 3-lane charts migrate to lanes 1/3/5; new charts retain 5-lane metadata.
+- Includes Korean-path MediaPipe model loading and bundled C++ runtime fixes.
+
 ## EMG Motion Rhythm — Windows x64
+
+MediaPipe 호환성 업데이트: 한글 경로에서 모델을 불러오지 못하는 문제를 보완했습니다. 필요한 C++ 런타임을 함께 포함하고, 설정의 카메라 테스트에서 MediaPipe 활성 상태와 실제 오류를 확인할 수 있습니다. 초기화 실패가 대체 인식 뒤에 숨지 않도록 표시합니다.
 
 음악 목록 업데이트: 음악 선택 공간을 확대해 한 화면에 여러 곡을 표시합니다. 20곡 테스트에서 1280×720은 7곡, 1440×900은 14곡, 1920×1080은 20곡을 표시했습니다. 긴 제목은 툴팁으로 확인할 수 있으며, 기존 선택·불러오기·더블클릭 동작은 유지합니다.
 
@@ -15,9 +25,8 @@ EMG 장치 연결 업데이트:
 
 ZIP 전체를 압축 해제한 뒤 `EMG-Motion-Rhythm.exe`를 실행하세요. Python 설치가 필요하지 않으며, `_internal` 폴더를 함께 유지해야 합니다.
 
-- Glassmorphism Sonic Lab UI, 원근 3레인과 크리스탈 노트·히트 파동
+- Glassmorphism Sonic Lab UI, 원근 5레인과 크리스탈 노트·히트 파동
 - 실제 웹캠 선택·연결 테스트, 관절 오버레이와 손가락별 인식 상태
-- 손가락 1/2/3개로 LEFT/CENTER/RIGHT 선택, 4~5개는 가로 위치로 선택
 - 1920×1080·1440×900 화면 지원과 비율 유지
 - 곡 전체 재생 완료 후 결과 화면 전환
 - 임계값 저장, 센서가 없는 환경의 키보드·모의 EMG 입력

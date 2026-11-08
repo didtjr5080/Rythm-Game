@@ -49,12 +49,27 @@ class SerialChecks(unittest.TestCase):
     def send(self, text):
         self.wire.data += text
         return self.reader.read()
-    def test_esp8266_and_peak_between_frames(self):
-        value, active = self.send(b'EMG_DEVICE:ESP8266_A0:1\nEMG1 raw:520 filtered:60 seq:1\nEMG1 raw:512 filtered:5 seq:2\n')
-        self.assertEqual(value,5); self.assertTrue(active)
-        self.assertIn('ESP8266_A0 CONNECTED',self.reader.status)
-        self.now += .2
-        self.assertFalse(self.reader.read()[1])
+    def packet(self, value, count=1):
+        return self.send(('EMG1 raw:512 filtered:%d seq:1\n' % value).encode()*count)
+    def test_requires_rest_and_confirmed_contraction(self):
+        self.send(b'EMG_DEVICE:ESP8266_A0:1\n')
+        self.assertFalse(self.packet(100, 10)[1])  # High at startup never arms.
+        self.assertFalse(self.packet(5, 4)[1])
+        self.assertFalse(self.packet(100)[1])  # Single spike rejected.
+        self.assertTrue(self.packet(100)[1])
+        self.assertIn('ESP8266_A0 CONNECTED', self.reader.status)
+        self.now += .16
+        self.assertFalse(self.reader.read()[1])  # Frozen last sample cannot hit.
+        self.assertFalse(self.packet(100, 4)[1])  # Resuming high cannot retrigger.
+        self.assertFalse(self.packet(5)[1])
+    def test_no_keyboard_fallback_when_unplugged(self):
+        self.reader.set_space_pressed(True)
+        self.wire.broken = True
+        self.assertEqual(self.reader.read(), (0.0, False))
+    def test_zero_threshold_never_activates(self):
+        self.reader.threshold = 0
+        self.packet(0, 4)
+        self.assertFalse(self.packet(100, 4)[1])
     def test_partial_frame_and_raw_mode(self):
         self.reader.signal='raw'
         self.assertEqual(self.send(b'EMG1 raw:123 filtered:')[0],0)

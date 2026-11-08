@@ -307,7 +307,8 @@ class SettingsScreen(QWidget):
                 draw_hand_skeleton_overlay(painter,QRectF(pixmap.rect()),tracked['landmarks'],finger_states=tracked.get('finger_states'))
             painter.end()
             count=tracked.get('finger_count')
-            self.camera_status.setText(self.preview_source.status+' / '+finger_summary(tracked.get('finger_states'))+f" / FINGERS: {count if count is not None else '--'} / "+self.preview_tracker.status+" / 1=LEFT 2=CENTER 3=RIGHT 4/5=POSITION"+(f" / {self.preview_tracker.last_error}" if self.preview_tracker.last_error else ''))
+            self.camera_status.setText(self.preview_source.status+'\n'+self.preview_tracker.diagnostic_summary+'\n'+finger_summary(tracked.get('finger_states'))+f" / FINGERS: {count if count is not None else '--'} / 1-5 FINGERS = LANES 1-5 / FIST = NONE")
+            self.camera_status.setStyleSheet('color: #6EE7B7;' if self.preview_tracker.backend_is_mediapipe else 'color: #FB923C;')
         self.camera_preview.setPixmap(pixmap.scaled(480,200,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation))
 
     def go_back(self):

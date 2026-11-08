@@ -1,9 +1,9 @@
+import math
 import re
 import time
 import serial
 from app import config
 from app.input.emg_devices import discover_emg_devices
-from app.input.mock_emg_reader import MockEMGReader
 
 
 class SerialEMGReader:
@@ -16,11 +16,13 @@ class SerialEMGReader:
         self.baudrate = baudrate or config.EMG_BAUDRATE
         self.threshold = config.EMG_THRESHOLD if threshold is None else threshold
         self.serial = None
-        self.fallback = MockEMGReader(self.threshold)
+        self._armed = False
+        self._low_samples = 0
+        self._high_samples = 0
+        self._active = False
         self.last_value = 0.0
         self.raw_value = 0.0
         self.envelope_value = 0.0
-        self.activated_until = 0.0
         self.status = 'SEARCHING FOR EMG'
         self.error = None
         self.verified = False
@@ -34,7 +36,7 @@ class SerialEMGReader:
         self._connect()
 
     def set_space_pressed(self, pressed):
-        self.fallback.set_space_pressed(pressed)
+        pass  # Keyboard simulation is available only in explicit mock mode.
 
     def _connect(self):
         now = time.monotonic()
@@ -54,7 +56,7 @@ class SerialEMGReader:
                     devices = [d for d in devices if d['port'] == self.requested_port]
                 self._queue = devices
             if not self._queue:
-                self.status = 'NO EMG DEVICE / SPACE FALLBACK'
+                self.status = 'NO EMG DEVICE / INPUT DISABLED'
                 return
             device = self._queue.pop(0)
             self.serial = serial.Serial(device['port'], self.baudrate, timeout=0, write_timeout=.1)
@@ -78,8 +80,9 @@ class SerialEMGReader:
         self.serial = None
         self.verified = False
         self.last_value = self.raw_value = self.envelope_value = 0.0
-        self.activated_until = 0.0
         self._buffer = b''
+        self._armed = self._active = False
+        self._low_samples = self._high_samples = 0
         self.status = status
 
     @staticmethod
@@ -118,10 +121,12 @@ class SerialEMGReader:
 
     def read(self):
         now = time.monotonic()
-        self.fallback.threshold = self.threshold
+        if self._last_sample and now-self._last_sample >= .15:
+            self._armed = self._active = False
+            self._low_samples = self._high_samples = 0
         if self.serial is None:
             self._connect()
-            return self.fallback.read()
+            return 0.0, False
         try:
             count = min(self.serial.in_waiting, 4096)
             if count:
@@ -151,19 +156,35 @@ class SerialEMGReader:
                 self.last_value = float(value)
                 self._last_sample = now
                 self.status = f'{self.port} / '+((self.board_name or 'EMG')+' CONNECTED' if self.verified else 'LEGACY SERIAL DATA')
-                if value >= self.threshold:
-                    self.activated_until = now + config.EMG_INPUT_HOLD_MS/1000
+                # Require rest before each contraction; reject isolated noise peaks.
+                if not math.isfinite(value) or self.threshold <= 0:
+                    self._armed = self._active = False
+                    self._low_samples = self._high_samples = 0
+                elif value < self.threshold * .6:
+                    self._low_samples += 1
+                    self._high_samples = 0
+                    self._active = False
+                    if self._low_samples >= 4:
+                        self._armed = True
+                elif value >= self.threshold:
+                    self._low_samples = 0
+                    self._high_samples += 1
+                    if self._armed and self._high_samples >= 2:
+                        self._active = True
+                        self._armed = False
+                else:
+                    self._low_samples = self._high_samples = 0
             if not self._last_sample and now-self._opened_at > 3.5:
                 self._disconnect(f'{self.port} / NO COMPATIBLE EMG DATA')
-                return self.fallback.read()
+                return 0.0, False
             if self._last_sample and now-self._last_sample > 1.0:
                 self._disconnect(f'{self.port} / EMG SIGNAL LOST / RECONNECTING')
-                return self.fallback.read()
-            return self.last_value, now <= self.activated_until
+                return 0.0, False
+            return self.last_value, self._active and now-self._last_sample < .15
         except Exception as exc:
             self.error = str(exc)
             self._disconnect(f'EMG DISCONNECTED / {exc}')
-            return self.fallback.read()
+            return 0.0, False
 
     def close(self):
         self._closed = True

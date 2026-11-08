@@ -72,7 +72,7 @@ def generate_notes_from_analysis(analysis: dict, difficulty: str = "normal") -> 
     try:
         from note_generator import generate_notes
 
-        chart = generate_notes(analysis, difficulty=difficulty, lanes=4)
+        chart = generate_notes(analysis, difficulty=difficulty, lanes=config.LANE_COUNT)
         converted = chart_to_motion_notes(chart)
         if converted:
             return converted
@@ -90,5 +90,5 @@ def save_notes_json(notes: list[dict], output_dir: str | Path | None = None, son
     path = notes_path_for_song(song_path) if song_path else target_dir / f"notes_{int(time.time())}.json"
     notes = simplify_for_emg(notes)
     with open(path, "w", encoding="utf-8") as handle:
-        json.dump(notes, handle, indent=2)
+        json.dump({"lane_count": config.LANE_COUNT, "notes": notes}, handle, indent=2)
     return path
