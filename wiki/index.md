@@ -4,7 +4,7 @@ Rythm-Game 위키
 
 - [설정 전환 크래시 수정](../docs/camera-transition-crash.md) — EXTRACTED/INFERRED: 네이티브 오류 기록, 카메라 공유·수명 직렬화, 손 클릭 전환 검사.
 
-- [앱 내부 손 커서](../docs/hand-cursor.md) — EXTRACTED: 메인·설정 화면 전용 원형 포인터, 접기 클릭, 두 번 접기 스크롤 모드.
+- [앱 내부 손 커서](../docs/hand-cursor.md) — EXTRACTED: 메인·설정·결과·결과 목록의 원형 포인터, 접기 클릭, 두 번 접기 스크롤 모드.
 
 - [프레임 지연 최적화](../docs/performance.md) — EXTRACTED: 영상 작업 스레드, 최신 결과, 채보 구간 검색, 검증 범위.
 
