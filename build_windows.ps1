@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "2026.11.08.5",
+    [string]$Version = "2026.11.09.1",
     [switch]$SkipBuild
 )
 $ErrorActionPreference = "Stop"

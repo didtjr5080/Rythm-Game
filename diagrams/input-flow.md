@@ -2,13 +2,14 @@ Input Flow Diagram
 
 ```mermaid
 graph TD
-    A[Camera Frame] --> M{MediaPipe active?}
+    A[Camera Frame: worker thread] --> M{MediaPipe active?}
     RUNTIME[Bundled C++ runtime and ASCII model path] --> M
     M -- Yes --> B[MediaPipe Hand Tracking]
     M -- No --> FALLBACK[OpenCV approximation with visible error]
     FALLBACK --> C
     B --> C[Finger Count Lane]
-    C --> D[1-5 fingers select lanes 1-5; fist selects none]
+    C --> LATEST[One latest result; expires after 250ms]
+    LATEST --> D[GUI: 1-5 fingers select lanes 1-5; fist selects none]
     E[Keyboard Lane Fallback] --> D
     P[Settings: auto or chosen USB identity] --> Q[Discover and reconnect serial device]
     Q --> R[Verify firmware and parse framed samples]

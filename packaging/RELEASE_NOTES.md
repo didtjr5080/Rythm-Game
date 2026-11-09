@@ -1,3 +1,12 @@
+## Performance update
+
+- Camera capture and MediaPipe inference run in a background worker in gameplay, lobby, calibration, and camera settings.
+- Latest-result delivery prevents an application frame backlog; stale hand results expire after 250ms.
+- Tracking uses a maximum 640px image while the selected camera display resolution is preserved.
+- Reuses unchanged camera conversions and searches only visible notes in long charts.
+- Preserves five lanes, filtered EMG threshold 12, judgment timing and full-song playback.
+- Regression checks cover slow inference, worker cleanup, stale-result rejection, and high-resolution rendering. Physical-camera FPS still requires verification on the exhibition PC.
+
 ## Tested EMG calibration defaults
 
 - New installations use filtered activity (envelope) with threshold 12, matching the completed hardware test.

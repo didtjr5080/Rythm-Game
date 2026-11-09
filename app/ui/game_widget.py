@@ -14,7 +14,8 @@ from app.game.rhythm_game_engine import RhythmGameEngine
 from app.i18n import tr
 from app.input.input_fusion import GameInputState, InputFusion
 from app.settings import load_settings
-from app.input.camera import CameraSource, draw_camera_frame
+from app.input.camera import draw_camera_frame
+from app.input.live_video import LiveVideoWorker
 
 
 from app.ui.theme import (draw_aurora_background, draw_frosted_glass_card, draw_crystal_note,
@@ -32,10 +33,12 @@ class GameWidget(QWidget):
         self.settings = load_settings()
         self.language = self.settings["language"]
         self.engine = RhythmGameEngine.from_json_file(notes_path) if notes_path else RhythmGameEngine()
+        self.video_worker = LiveVideoWorker(self.settings, enabled=config.USE_CAMERA)
         self.input_fusion = InputFusion(
             use_camera=config.USE_CAMERA and self.settings["camera_enabled"],
             emg_threshold=int(self.settings["emg_threshold"]),
             camera_flip=bool(self.settings["camera_flip"]),
+            hand_tracker=self.video_worker if config.USE_CAMERA and self.settings['camera_enabled'] else None,
         )
         self.session_logger = SessionLogger()
         self.audio_player = AudioPlayer(self.song_path, volume=self.settings["music_volume"])
@@ -66,18 +69,25 @@ class GameWidget(QWidget):
         if app is not None:
             app.installEventFilter(self)
         self.timer = QTimer(self)
+        self.timer.setTimerType(Qt.TimerType.PreciseTimer)
         self.timer.timeout.connect(self.game_loop)
         self.timer.start(max(1, int(1000 / config.FPS)))
 
     def _open_camera(self):
-        self.camera_source = CameraSource(self.settings, enabled=config.USE_CAMERA)
-        self.capture = self.camera_source.capture
-        self.cv2 = self.camera_source.cv2
+        import cv2
+        self.camera_source = self.video_worker
+        self.capture = None
+        self.cv2 = cv2
 
     def _read_camera_frame(self):
         return self.camera_source.read()
 
     def _update_camera_pixmap(self, frame):
+        frame_key = (id(frame), self.camera_flip)
+        if frame is not None and getattr(self, '_camera_frame_key', None) == frame_key:
+            return
+        self._camera_frame_key = frame_key
+        self._camera_frame_reference = frame
         if frame is None or self.cv2 is None:
             self.camera_pixmap = None
             self.camera_debug_pixmap = None
@@ -89,12 +99,7 @@ class GameWidget(QWidget):
             height, width, channels = rgb.shape
             image = QImage(rgb.data, width, height, channels * width, QImage.Format.Format_RGB888)
             self.camera_pixmap = QPixmap.fromImage(image.copy())
-            if self.settings.get("show_camera_debug", True):
-                self.camera_debug_pixmap = self.camera_pixmap.scaled(
-                    240, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-                )
-            else:
-                self.camera_debug_pixmap = None
+            self.camera_debug_pixmap = None
         except Exception:
             self.camera_pixmap = None
             self.camera_debug_pixmap = None
@@ -279,7 +284,7 @@ class GameWidget(QWidget):
         now=self._playback_time_ms()
         # Map the existing engine's travel distance so hit time stays exactly on the laser.
         travel=max(1,(judge_y-top)/int(self.settings['note_speed'])*1000)
-        for note in reversed(self.engine.notes):
+        for note in reversed(self.engine.notes_in_time_range(now-travel*.13, now+travel)):
             if note.judged: continue
             progress=1-(note.hit_time_ms-now)/travel
             if not 0<=progress<=1.13: continue

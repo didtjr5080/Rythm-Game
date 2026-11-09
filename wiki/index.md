@@ -1,5 +1,7 @@
 Rythm-Game 위키
 
+- [프레임 지연 최적화](../docs/performance.md) — EXTRACTED: 영상 작업 스레드, 최신 결과, 채보 구간 검색, 검증 범위.
+
 - v2026.11.08.5: 필터 신호·임계값 12 기본 설정 및 사용자 테스트 완료. [입력 설정](../docs/five-lane-input.md)
 
 - [5레인과 EMG 입력 수정](../docs/five-lane-input.md) — EXTRACTED: 손가락 개수 매핑, 실제 입력 차단, 수축당 한 번 판정.

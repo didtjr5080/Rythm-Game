@@ -1,5 +1,6 @@
 import json
 from dataclasses import replace
+from bisect import bisect_left, bisect_right
 from pathlib import Path
 
 from app import config
@@ -10,7 +11,9 @@ from app.game.score import ScoreState
 
 class RhythmGameEngine:
     def __init__(self, notes: list[Note] | None = None):
-        self.notes = notes or self.generate_sample_notes()
+        self.notes = sorted(notes or self.generate_sample_notes(), key=lambda note: note.hit_time_ms)
+        self._note_times = [note.hit_time_ms for note in self.notes]
+        self._next_note_index = 0
         self.score_state = ScoreState()
         self._previous_activation = False
         self.last_result = ""
@@ -54,7 +57,9 @@ class RhythmGameEngine:
     ) -> list[tuple[Note, float]]:
         judge_y = height * judgement_line_y_ratio
         visible = []
-        for note in self.notes:
+        first_time = current_time_ms - (height+40-judge_y)/note_speed*1000
+        last_time = current_time_ms + (judge_y+40)/note_speed*1000
+        for note in self.notes_in_time_range(first_time, last_time):
             if note.judged:
                 continue
             delta_sec = (note.hit_time_ms - current_time_ms) / 1000.0
@@ -63,26 +68,35 @@ class RhythmGameEngine:
                 visible.append((note, y))
         return visible
 
+    def notes_in_time_range(self, first_time, last_time):
+        start = bisect_left(self._note_times, first_time)
+        stop = bisect_right(self._note_times, last_time)
+        return self.notes[start:stop]
+
+    def _advance_cursor(self):
+        while self._next_note_index < len(self.notes) and self.notes[self._next_note_index].judged:
+            self._next_note_index += 1
+
     def update(self, input_state, current_time_ms: int):
         active = bool(input_state.emg_activated)
         triggered = active and not self._previous_activation
         self._previous_activation = active
         input_state = replace(input_state, emg_activated=triggered)
         result = None
-        for index, note in enumerate(self.notes):
-            if note.judged:
-                continue
+        self._advance_cursor()
+        if self._next_note_index < len(self.notes):
+            index = self._next_note_index
+            note = self.notes[index]
             result = judge_note(note, input_state, current_time_ms, config)
             if result:
                 self.score_state.apply_result(result)
                 self.last_result = result
                 self.last_judged_note_index = index
-                break
-            if current_time_ms < note.hit_time_ms - config.JUDGE_WINDOW_MS:
-                break
+                self._advance_cursor()
         return result
 
     def is_finished(self, current_time_ms: int) -> bool:
         if not self.notes:
             return True
-        return all(note.judged for note in self.notes) or current_time_ms > self.notes[-1].hit_time_ms + 1500
+        self._advance_cursor()
+        return self._next_note_index == len(self.notes) or current_time_ms > self.notes[-1].hit_time_ms + 1500

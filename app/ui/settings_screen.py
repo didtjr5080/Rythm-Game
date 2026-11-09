@@ -15,11 +15,11 @@ from PyQt6.QtWidgets import (
 
 from app.i18n import tr
 from app import config
+from app.input.live_video import LiveVideoWorker
 from app.input.emg_devices import discover_emg_devices
 from app.input.emg_reader import SerialEMGReader
 from app.input.mock_emg_reader import MockEMGReader
-from app.input.camera import CameraSource, rgb_pixmap
-from app.input.mediapipe_tracker import MediaPipeHandTracker
+from app.input.camera import rgb_pixmap
 from app.ui.theme import draw_hand_skeleton_overlay, finger_summary
 from PyQt6.QtGui import QPainter
 from PyQt6.QtCore import QRectF
@@ -278,22 +278,26 @@ class SettingsScreen(QWidget):
         self.stop_camera_preview()
         settings=dict(self.settings, camera_enabled=self.camera_enabled_checkbox.isChecked(),
                       camera_index=self.camera_index_combo.currentData(),
-                      camera_resolution=self.camera_resolution_combo.currentText())
-        self.preview_source=CameraSource(settings,enabled=config.USE_CAMERA)
-        if self.preview_source.capture is not None:
-            self.preview_tracker=MediaPipeHandTracker(flip=self.camera_flip_checkbox.isChecked())
+                      camera_resolution=self.camera_resolution_combo.currentText(),
+                      camera_flip=self.camera_flip_checkbox.isChecked())
+        self.preview_source=LiveVideoWorker(settings,enabled=config.USE_CAMERA)
+        self.preview_tracker=self.preview_source
+        self._preview_frame_reference=None
         self.camera_status.setText(self.preview_source.status+' / '+self.preview_source.error if self.preview_source.error else self.preview_source.status)
         self.refresh_camera_preview()
-        if self.preview_source.capture is not None: self.preview_timer.start(33)
+        self.preview_timer.start(33)
 
     def refresh_camera_preview(self):
         if self.preview_source is None: return
+        self.preview_tracker.set_flip(self.camera_flip_checkbox.isChecked())
         frame=self.preview_source.read()
         self.camera_status.setText(self.preview_source.status+' / '+self.preview_source.error if self.preview_source.error else self.preview_source.status)
         if frame is None:
             self.camera_preview.setText(self.preview_source.status)
             return
-        cv2=self.preview_source.cv2
+        if frame is self._preview_frame_reference: return
+        self._preview_frame_reference=frame
+        import cv2
         tracked=None
         if self.preview_tracker is not None:
             self.preview_tracker.set_flip(self.camera_flip_checkbox.isChecked())

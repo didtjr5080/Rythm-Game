@@ -64,8 +64,17 @@ for resolution in ('1920x1080','1440x900'):
             with patch('cv2.VideoCapture',return_value=Capture(True)):
                 with patch('app.ui.settings_screen.config.USE_CAMERA',True):
                     screen.start_camera_preview()
+                from PyQt6.QtTest import QTest
+                import time
+                deadline=time.monotonic()+5
+                while screen.camera_preview.pixmap() is None or screen.camera_preview.pixmap().isNull():
+                    assert time.monotonic()<deadline,screen.camera_status.text()
+                    QTest.qWait(20)
                 assert not screen.camera_preview.pixmap().isNull()
+                worker=screen.preview_source
                 screen.stop_camera_preview()
+                worker._thread.join(2)
+                assert not worker._thread.is_alive()
         else:
             with patch.object(ResultScreen,'_save_result',lambda self:setattr(self,'result_path',Path('resolution_check.json'))):
                 window.show_result_screen(dict(accuracy=96.8,perfect_count=384,good_count=21,miss_count=7))

@@ -3,8 +3,9 @@ from PyQt6.QtCore import Qt, QTimer, QRectF
 from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 from app import config
-from app.input.camera import CameraSource, rgb_pixmap
+from app.input.camera import rgb_pixmap
 from app.input.input_fusion import InputFusion
+from app.input.live_video import LiveVideoWorker
 from app.settings import load_settings, save_settings
 from app.ui.theme import AuroraScreen, GlassPanel, draw_waveform
 from app.ui.dashboard import Instrument
@@ -21,9 +22,9 @@ class SignalPlot(QWidget):
 class CalibrationScreen(AuroraScreen):
     def __init__(self,main_window):
         super().__init__(); self.main_window=main_window; self.settings=load_settings()
-        self.fusion=InputFusion(use_camera=config.USE_CAMERA and self.settings['camera_enabled'],emg_threshold=self.settings['emg_threshold'],camera_flip=self.settings['camera_flip'])
+        self.camera_source=LiveVideoWorker(self.settings,enabled=config.USE_CAMERA)
+        self.fusion=InputFusion(use_camera=config.USE_CAMERA and self.settings['camera_enabled'],emg_threshold=self.settings['emg_threshold'],camera_flip=self.settings['camera_flip'],hand_tracker=self.camera_source if config.USE_CAMERA and self.settings['camera_enabled'] else None)
         self.reader=self.fusion.emg_reader
-        self.camera_source=CameraSource(self.settings,enabled=config.USE_CAMERA)
         self.capture=self.camera_source.capture
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         outer=QVBoxLayout(self); outer.setContentsMargins(45,28,45,24)

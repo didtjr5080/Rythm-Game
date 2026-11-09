@@ -56,6 +56,28 @@ def run_self_test(output_path):
                 hands.close()
             report['unicode_model_inference']=True
         report['checks'].append('Unicode model path native inference')
+        from app.input.live_video import LiveVideoWorker
+        import time
+        class TestCamera:
+            capture = True
+            status = 'SELF-TEST CAMERA'
+            def __init__(self, settings): pass
+            def read(self): return np.zeros((240,320,3), dtype=np.uint8)
+            def release(self): self.capture = None
+        video = LiveVideoWorker(dict(camera_enabled=True,camera_flip=True), camera_factory=TestCamera)
+        try:
+            deadline = time.monotonic()+15
+            while video.read() is None:
+                assert time.monotonic()<deadline, video.diagnostic_summary
+                time.sleep(.01)
+            assert video.backend_is_mediapipe, video.diagnostic_summary
+            assert not video.track(video.read())['hand_visible']
+        finally:
+            video.close()
+            video._thread.join(5)
+        assert not video._thread.is_alive()
+        report['background_hand_tracking'] = True
+        report['checks'].append('Background native hand inference, latest-frame delivery and worker shutdown')
         for size in ((1920,1080),(1440,900)):
             widget = Instrument('performance')
             widget.resize(*size)

@@ -4,7 +4,8 @@ import time
 from PyQt6.QtCore import QRectF, Qt, QTimer
 from PyQt6.QtGui import QPainter, QColor, QPen, QLinearGradient, QPainterPath
 from PyQt6.QtWidgets import QWidget
-from app.input.camera import CameraSource, rgb_pixmap, draw_camera_frame
+from app.input.camera import rgb_pixmap, draw_camera_frame
+from app.input.live_video import LiveVideoWorker
 from app.ui.theme import (draw_waveform, draw_crystal_note, draw_circular_gauge,
     draw_hand_skeleton_overlay, text, finger_summary)
 
@@ -26,8 +27,8 @@ class Instrument(QWidget):
         from app.input.input_fusion import InputFusion
         from app.settings import load_settings
         settings=load_settings()
-        self.fusion=InputFusion(use_camera=config.USE_CAMERA and settings['camera_enabled'],emg_threshold=settings['emg_threshold'],camera_flip=settings['camera_flip'])
-        self.camera_source=CameraSource(settings,enabled=config.USE_CAMERA)
+        self.camera_source=LiveVideoWorker(settings,enabled=config.USE_CAMERA)
+        self.fusion=InputFusion(use_camera=config.USE_CAMERA and settings['camera_enabled'],emg_threshold=settings['emg_threshold'],camera_flip=settings['camera_flip'],hand_tracker=self.camera_source if config.USE_CAMERA and settings['camera_enabled'] else None)
         self.capture=self.camera_source.capture
         self.live_timer=QTimer(self); self.live_timer.timeout.connect(self.refresh_live); self.live_timer.start(100)
 

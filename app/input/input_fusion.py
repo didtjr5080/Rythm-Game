@@ -29,8 +29,9 @@ class InputFusion:
         use_mock_emg: bool | None = None,
         emg_threshold: int = config.EMG_THRESHOLD,
         camera_flip: bool = config.CAMERA_FLIP,
+        hand_tracker=None,
     ):
-        self.tracker = MediaPipeHandTracker(flip=camera_flip) if use_camera else None
+        self.tracker = hand_tracker if hand_tracker is not None else (MediaPipeHandTracker(flip=camera_flip) if use_camera else None)
         from app.settings import load_settings
         settings = load_settings()
         if use_mock_emg is None:
@@ -40,6 +41,7 @@ class InputFusion:
             device_id=settings['emg_device_id'], signal=settings['emg_signal'])
         self.last_camera_frame = None
         self.latest_frame_rgb = None
+        self._rgb_source_frame = None
         self.finger_states = None
         self.hand_landmarks_norm = None
         self.raw_emg_value = 0.0
@@ -94,12 +96,15 @@ class InputFusion:
         self.raw_emg_value = float(getattr(self.emg_reader, "raw_value", emg_value))
         self.filtered_emg_value += .18 * (float(emg_value) - self.filtered_emg_value)
         self.emg_mvc_ratio = self.filtered_emg_value / max(1, self.emg_reader.threshold)
-        self.latest_frame_rgb = None
-        if self.last_camera_frame is not None:
+        if self.last_camera_frame is None:
+            self.latest_frame_rgb = None
+            self._rgb_source_frame = None
+        elif self.last_camera_frame is not self._rgb_source_frame:
+            self._rgb_source_frame = self.last_camera_frame
             try:
                 self.latest_frame_rgb = self.last_camera_frame[:, :, ::-1].copy()
             except (TypeError, IndexError, AttributeError):
-                pass
+                self.latest_frame_rgb = None
         return state, self.last_camera_frame
 
     def close(self):
