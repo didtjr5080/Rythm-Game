@@ -57,6 +57,10 @@ try:
         assert time.monotonic() < deadline, worker.status
         time.sleep(.005)
     assert owners[0] != threading.get_ident()
+    assert worker.hand_sample()[1]['lane']==4
+    worker._backend_ready=False
+    assert worker.hand_sample() is None  # Approximate fallback cannot navigate.
+    worker._backend_ready=True
     fusion = InputFusion(use_camera=False, use_mock_emg=True, emg_threshold=12, hand_tracker=worker)
     durations = []
     for _ in range(200):
@@ -77,6 +81,7 @@ try:
     assert blocked.wait(2)
     time.sleep(worker.MAX_AGE+.03)
     assert worker.read() is None
+    assert worker.hand_sample() is None
     assert not worker.track(None)['hand_visible']
     start=time.perf_counter(); worker.close()
     assert time.perf_counter()-start < .05

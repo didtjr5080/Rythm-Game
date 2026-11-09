@@ -102,3 +102,5 @@ EXTRACTED: `docs/emg-device-setup.md`, `wiki/index.md`, `diagrams/input-flow.md`
 2026-11-08 — EXTRACTED: 사용자 실기 테스트 완료. 새 설치의 기본 EMG 신호를 envelope, 임계값을 12로 확인·통일하고 v2026.11.08.5 EXE 자체 검사에 기본값 검증을 추가했습니다. 기존 사용자 설정은 유지합니다.
 
 2026-11-09 ? EXTRACTED: camera/inference moved off GUI across live screens; bounded latest result with expiry; duplicate conversions cached; visible-note binary search and judgment cursor. Added performance documentation, input diagram and slow-worker lifecycle regression tests. Physical camera FPS remains unverified because camera 0 was unavailable.
+
+2026-11-09 ? EXTRACTED: app-local hand cursor on main/settings only, using shared native video results. Added fold click with double-fold disambiguation, scroll-mode toggle, circular feedback, popup selection and focus/tracking/page guards. Updated hand-cursor docs/diagram, packaged checks, regression tests and release notes. Physical hand sensitivity remains to be verified.

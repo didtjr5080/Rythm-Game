@@ -10,6 +10,7 @@ from app.ui.result_screen import ResultScreen
 from app.ui.results_browser_screen import ResultsBrowserScreen
 from app.ui.settings_screen import SettingsScreen
 from app.ui.start_screen import StartScreen
+from app.ui.hand_cursor import HandCursorController
 
 
 class MainWindow(QMainWindow):
@@ -19,7 +20,18 @@ class MainWindow(QMainWindow):
         self.notes_path: str | None = None
         self.setWindowTitle(config.PROJECT_NAME)
         self.apply_window_settings()
+        self.hand_cursor = HandCursorController(self)
         self.show_start_screen()
+
+    def setCentralWidget(self, widget):
+        if hasattr(self, 'hand_cursor'): self.hand_cursor.detach()
+        super().setCentralWidget(widget)
+        if not hasattr(self, 'hand_cursor'): return
+        if isinstance(widget, StartScreen):
+            self.hand_cursor.attach(widget, lambda: getattr(widget.bio, 'camera_source', None))
+        elif isinstance(widget, SettingsScreen):
+            widget.start_camera_preview()
+            self.hand_cursor.attach(widget, lambda: widget.preview_source)
 
     def apply_window_settings(self):
         settings = load_settings()
@@ -48,6 +60,7 @@ class MainWindow(QMainWindow):
             current.stop_emg_test(); current.device_timer.stop(); current.stop_camera_preview()
 
     def closeEvent(self,event):
+        self.hand_cursor.detach()
         self._release_current_inputs()
         current=self.centralWidget()
         if isinstance(current,GameWidget): current.close()

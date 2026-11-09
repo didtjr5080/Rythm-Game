@@ -78,6 +78,26 @@ def run_self_test(output_path):
         assert not video._thread.is_alive()
         report['background_hand_tracking'] = True
         report['checks'].append('Background native hand inference, latest-frame delivery and worker shutdown')
+        from app.input.hand_gestures import FoldGestures
+        from app.ui.hand_cursor import HandCursorController
+        from PyQt6.QtWidgets import QWidget
+        from PyQt6.QtCore import QPointF
+        gestures = FoldGestures()
+        for moment,count in ((0.,5),(.12,5),(.16,0),(.26,0),(.30,5),(.42,5),(.46,0)):
+            assert gestures.feed(count,count==0,moment,None) is None
+        assert gestures.feed(0,True,.56,None)[0] == 'scroll'
+        assert gestures.scrolling and gestures.advance(2.) is None
+        cursor_host = QWidget()
+        cursor_host.resize(320,240)
+        cursor = HandCursorController(cursor_host)
+        cursor.attach(cursor_host, lambda: None)
+        cursor.timer.stop()
+        cursor.overlay.move_ring(QPointF(160,120), True)
+        assert not cursor.overlay.grab().isNull()
+        cursor.detach()
+        cursor_host.close()
+        report['hand_navigation'] = True
+        report['checks'].append('App-local cursor ring and fold/double-fold gesture state machine')
         for size in ((1920,1080),(1440,900)):
             widget = Instrument('performance')
             widget.resize(*size)

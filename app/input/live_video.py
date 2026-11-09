@@ -106,6 +106,15 @@ class LiveVideoWorker:
         # Return a copy; GUI and inference never mutate the same dictionary.
         return dict(snapshot[2])
 
+    def hand_sample(self):
+        """Independent navigation consumer; never infer again or accept OpenCV guesses."""
+        with self._lock:
+            snapshot = self._snapshot
+        if (not self._backend_ready or self._stop.is_set() or snapshot is None
+                or time.monotonic()-snapshot[0] > self.MAX_AGE or snapshot[3] != self.flip):
+            return None
+        return snapshot[0], dict(snapshot[2])
+
     def set_flip(self, enabled):
         self.flip = bool(enabled)
 

@@ -1,3 +1,12 @@
+## App-local hand cursor
+
+- Main and Settings screens support a MediaPipe-driven circular pointer. The OS cursor and other applications are untouched.
+- Open hand moves; one fold clicks after a 450ms double-fold wait. Two quick folds cancel the click and toggle scroll mode.
+- In scroll mode, move the hand up/down; two quick folds or ESC exit. The ring turns purple and displays SCROLL.
+- Settings starts its shared camera preview automatically. App-owned combo popups support hand selection.
+- Tracking loss, expired results, focus loss, modal dialogs, resizing and page changes cancel pending actions. No gesture clicks in gameplay/calibration/results or from approximate OpenCV tracking.
+- Reuses the existing background video worker and retains the performance optimizations, five lanes and filtered EMG threshold 12.
+
 ## Performance update
 
 - Camera capture and MediaPipe inference run in a background worker in gameplay, lobby, calibration, and camera settings.

@@ -110,6 +110,9 @@ class SettingsScreen(QWidget):
         subtitle.setObjectName("subtitle")
         outer.addWidget(title)
         outer.addWidget(subtitle)
+        hand_help=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL')
+        hand_help.setObjectName('subtitle'); hand_help.setWordWrap(True)
+        outer.addWidget(hand_help)
 
         panel = QFrame()
         panel.setObjectName("panel")

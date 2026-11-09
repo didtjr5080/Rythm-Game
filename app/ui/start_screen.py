@@ -66,7 +66,7 @@ class StartScreen(AuroraScreen):
         outer=QVBoxLayout(self); outer.setContentsMargins(35,24,35,20); outer.setSpacing(14)
         title=QLabel('EMG MOTION RHYTHM / SONIC LAB'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         outer.addWidget(title)
-        sub=QLabel('SESSION: STANDBY / SONG SELECTION & BIO-CALIBRATION'); sub.setObjectName('subtitle'); sub.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(sub)
+        sub=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL'); sub.setObjectName('subtitle'); sub.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(sub)
         row=QHBoxLayout(); row.setSpacing(24)
         left=GlassPanel('SONG & BEAT DSP ANALYSIS'); ll=QVBoxLayout(left); ll.setContentsMargins(16,42,16,16)
         self.song_instrument=Instrument('song'); self.song_instrument.compact=True
