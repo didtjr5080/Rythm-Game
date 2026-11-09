@@ -53,6 +53,8 @@ class ResultsBrowserScreen(QWidget):
         header.addWidget(refresh)
         header.addWidget(back)
         outer.addLayout(header)
+        hint=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL')
+        hint.setObjectName('subtitle'); hint.setWordWrap(True); outer.addWidget(hint)
 
         body = QHBoxLayout()
         body.setSpacing(16)
@@ -111,12 +113,16 @@ class ResultsBrowserScreen(QWidget):
             item = self.detail_grid.takeAt(0)
             widget = item.widget()
             if widget is not None:
-                widget.deleteLater()
+                if widget is self.empty_label:
+                    widget.hide()
+                else:
+                    widget.deleteLater()
 
     def show_empty(self):
         self.clear_detail()
         self.empty_label.setText(tr("no_results", self.language))
         self.detail_grid.addWidget(self.empty_label, 0, 0)
+        self.empty_label.show()
 
     def show_selected_result(self):
         item = self.result_list.currentItem()

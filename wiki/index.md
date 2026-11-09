@@ -1,5 +1,7 @@
 Rythm-Game 위키
 
+- v2026.11.09.4: [손 커서](../docs/hand-cursor.md)를 결과 화면·저장된 결과 목록에도 확장했습니다. 게임 중에는 비활성화하며 기존 카메라 세션을 재사용합니다.
+
 - [설정 전환 크래시 수정](../docs/camera-transition-crash.md) — EXTRACTED/INFERRED: 네이티브 오류 기록, 카메라 공유·수명 직렬화, 손 클릭 전환 검사.
 
 - [앱 내부 손 커서](../docs/hand-cursor.md) — EXTRACTED: 메인·설정 화면 전용 원형 포인터, 접기 클릭, 두 번 접기 스크롤 모드.

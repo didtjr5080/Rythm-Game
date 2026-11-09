@@ -36,6 +36,8 @@ class ResultScreen(AuroraScreen):
         outer=QVBoxLayout(self); outer.setContentsMargins(50,28,50,24)
         title=QLabel('POST-GAME REHABILITATION ANALYTICS'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(title)
         saved=QLabel(f'SESSION: COMPLETED / {self.result_path.name}'); saved.setObjectName('subtitle'); outer.addWidget(saved)
+        hint=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL')
+        hint.setObjectName('subtitle'); hint.setWordWrap(True); outer.addWidget(hint)
         row=QHBoxLayout(); row.setSpacing(30)
         for kind,heading in (('song','SONG & BEAT DSP ANALYSIS'),('performance','NEURO-MOTOR PERFORMANCE REPORT'),('bio','LIVE BIO-CALIBRATION')):
             panel=GlassPanel(heading); layout=QVBoxLayout(panel); layout.setContentsMargins(16,44,16,18)

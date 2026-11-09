@@ -4,11 +4,11 @@ Extract the entire ZIP to a writable folder and run EMG-Motion-Rhythm.exe.
 Keep _internal next to the EXE; copying only the EXE will not work.
 No Python installation is required. Music and personal runtime data are not bundled.
 
-Hand navigation (Main and Settings only):
+Hand navigation (Main, Settings, post-game Results and saved Results):
 - Open hand: move green ring. Fold once: click after a short double-fold wait.
 - Two quick folds: toggle scroll mode (purple ring). Move hand up/down to scroll.
 - Two quick folds again or ESC: cancel scroll mode.
-- No OS mouse movement; other applications and game screens are excluded.
+- No OS mouse movement; other applications, gameplay and calibration screens are excluded.
 
 Settings:
 - New-install EMG defaults: Filtered activity (envelope), threshold 12.

@@ -4,7 +4,7 @@
 flowchart TD
     MP[Existing MediaPipe video worker] --> VALID{Fresh native hand result?}
     VALID -- No --> RESET[Hide pointer and cancel pending actions]
-    VALID -- Yes --> SCOPE{Main or Settings active; no modal?}
+    VALID -- Yes --> SCOPE{Main, Settings, Result or History active; no modal?}
     SCOPE -- No --> RESET
     SCOPE -- Yes --> OPEN[Open hand arms gesture and moves app-local ring]
     OPEN --> FOLD[Stable fold locks target and starts 450ms wait]
@@ -18,4 +18,4 @@ flowchart TD
     ESC[ESC, focus loss, resize or screen change] --> RESET
 ```
 
-EXTRACTED: No OS cursor movement or global input injection. Games and other screens are excluded.
+EXTRACTED: No OS cursor movement or global input injection. Gameplay and calibration are excluded.

@@ -18,6 +18,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.video_session = VideoSession(self)
+        self._navigation_video = None
         self.selected_song_path: str | None = None
         self.notes_path: str | None = None
         self.setWindowTitle(config.PROJECT_NAME)
@@ -27,6 +28,9 @@ class MainWindow(QMainWindow):
 
     def setCentralWidget(self, widget):
         if hasattr(self, 'hand_cursor'): self.hand_cursor.detach()
+        if self._navigation_video is not None:
+            self._navigation_video.close()
+            self._navigation_video = None
         super().setCentralWidget(widget)
         if not hasattr(self, 'hand_cursor'): return
         if isinstance(widget, StartScreen):
@@ -34,6 +38,9 @@ class MainWindow(QMainWindow):
         elif isinstance(widget, SettingsScreen):
             widget.start_camera_preview()
             self.hand_cursor.attach(widget, lambda: widget.preview_source)
+        elif isinstance(widget, (ResultScreen, ResultsBrowserScreen)):
+            self._navigation_video = self.video_session.acquire(load_settings(), enabled=config.USE_CAMERA)
+            self.hand_cursor.attach(widget, lambda: self._navigation_video)
 
     def apply_window_settings(self):
         was_active = self.isActiveWindow()
@@ -56,6 +63,9 @@ class MainWindow(QMainWindow):
             self.activateWindow()
 
     def _release_current_inputs(self):
+        if self._navigation_video is not None:
+            self._navigation_video.close()
+            self._navigation_video = None
         current=self.centralWidget()
         if current is None: return
         bio=getattr(current,'bio',None)
@@ -113,4 +123,6 @@ class MainWindow(QMainWindow):
         return False
 
     def show_result_screen(self, metrics: dict, session_paths: tuple | None = None):
+        if self._defer_hand_navigation(lambda: self.show_result_screen(metrics, session_paths)): return
+        self._release_current_inputs()
         self.setCentralWidget(ResultScreen(self, metrics, session_paths=session_paths))

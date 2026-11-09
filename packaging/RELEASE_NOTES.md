@@ -1,3 +1,11 @@
+## Hand control on Results screens
+
+- Post-game Results supports the same circular hand pointer, fold click and double-fold scroll mode.
+- Play Again and Back to Start work with hand input. Saved results support selection, scrolling, Refresh and Back.
+- Result screens reuse the existing shared camera session; gameplay and calibration keep gesture navigation disabled.
+- Fixed repeated empty-history refresh reusing a deleted placeholder label.
+- Regression tests cover fold-driven replay/return, result record selection, scrolling and camera reuse across game/result/main.
+
 ## Fix: crash entering Settings with hand cursor
 
 - Main and Settings reuse the same camera/tracking session instead of closing and reopening the camera at every transition.
@@ -12,7 +20,7 @@
 - Open hand moves; one fold clicks after a 450ms double-fold wait. Two quick folds cancel the click and toggle scroll mode.
 - In scroll mode, move the hand up/down; two quick folds or ESC exit. The ring turns purple and displays SCROLL.
 - Settings starts its shared camera preview automatically. App-owned combo popups support hand selection.
-- Tracking loss, expired results, focus loss, modal dialogs, resizing and page changes cancel pending actions. No gesture clicks in gameplay/calibration/results or from approximate OpenCV tracking.
+- Tracking loss, expired results, focus loss, modal dialogs, resizing and page changes cancel pending actions. No gesture clicks in gameplay/calibration or from approximate OpenCV tracking.
 - Reuses the existing background video worker and retains the performance optimizations, five lanes and filtered EMG threshold 12.
 
 ## Performance update
