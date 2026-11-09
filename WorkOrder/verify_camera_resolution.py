@@ -73,6 +73,7 @@ for resolution in ('1920x1080','1440x900'):
                 assert not screen.camera_preview.pixmap().isNull()
                 worker=screen.preview_source
                 screen.stop_camera_preview()
+                window.video_session.stop()
                 worker._thread.join(2)
                 assert not worker._thread.is_alive()
         else:

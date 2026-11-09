@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 
 from app.i18n import tr
 from app import config
-from app.input.live_video import LiveVideoWorker
+from app.input.live_video import open_live_video
 from app.input.emg_devices import discover_emg_devices
 from app.input.emg_reader import SerialEMGReader
 from app.input.mock_emg_reader import MockEMGReader
@@ -283,7 +283,7 @@ class SettingsScreen(QWidget):
                       camera_index=self.camera_index_combo.currentData(),
                       camera_resolution=self.camera_resolution_combo.currentText(),
                       camera_flip=self.camera_flip_checkbox.isChecked())
-        self.preview_source=LiveVideoWorker(settings,enabled=config.USE_CAMERA)
+        self.preview_source=open_live_video(self.main_window,settings,enabled=config.USE_CAMERA)
         self.preview_tracker=self.preview_source
         self._preview_frame_reference=None
         self.camera_status.setText(self.preview_source.status+' / '+self.preview_source.error if self.preview_source.error else self.preview_source.status)
@@ -319,6 +319,8 @@ class SettingsScreen(QWidget):
         self.camera_preview.setPixmap(pixmap.scaled(480,200,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation))
 
     def go_back(self):
+        defer = getattr(self.main_window, '_defer_hand_navigation', None)
+        if defer is not None and defer(self.go_back): return
         self.stop_emg_test(); self.device_timer.stop()
         self.stop_camera_preview(); self.main_window.show_start_screen()
 
@@ -354,6 +356,8 @@ class SettingsScreen(QWidget):
         self.emg_threshold_slider.setValue(int(DEFAULT_SETTINGS["emg_threshold"]))
 
     def save_and_back(self):
+        defer = getattr(self.main_window, '_defer_hand_navigation', None)
+        if defer is not None and defer(self.save_and_back): return
         emg_settings=self.emg_settings()
         self.stop_emg_test(); self.device_timer.stop()
         self.stop_camera_preview()

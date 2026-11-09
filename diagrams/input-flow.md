@@ -2,7 +2,9 @@ Input Flow Diagram
 
 ```mermaid
 graph TD
-    A[Camera Frame: worker thread] --> M{MediaPipe active?}
+    SESSION[Window-owned shared video session] --> A[Camera Frame: worker thread]
+    LOCK[Serialized native open and release] --> A
+    A --> M{MediaPipe active?}
     RUNTIME[Bundled C++ runtime and ASCII model path] --> M
     M -- Yes --> B[MediaPipe Hand Tracking]
     M -- No --> FALLBACK[OpenCV approximation with visible error]

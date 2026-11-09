@@ -12,6 +12,7 @@ build/
 app/data/sessions/
 app/data/results/
 app/data/settings.json
+app/data/logs/
 app/data/notes/
 app/data/songs/*
 !app/data/songs/.gitkeep

@@ -1,3 +1,11 @@
+## Fix: crash entering Settings with hand cursor
+
+- Main and Settings reuse the same camera/tracking session instead of closing and reopening the camera at every transition.
+- Serializes native camera open and release across workers; repeated page cleanup is idempotent.
+- Defers hand-triggered page swaps until mouse event delivery returns, and guards pointer cancellation during hover/resize.
+- Records runtime Python/native faults under _internal/app/data/logs for follow-up diagnosis; personal logs are not bundled.
+- Regression checks include 20 main/settings round trips and blocked previous-camera teardown. Actual physical-camera confirmation is still needed on the affected PC.
+
 ## App-local hand cursor
 
 - Main and Settings screens support a MediaPipe-driven circular pointer. The OS cursor and other applications are untouched.

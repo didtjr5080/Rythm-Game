@@ -35,3 +35,6 @@ This build is unsigned; no code-signing certificate was provided.
 
 Self-test without camera, serial or speakers:
 EMG-Motion-Rhythm.exe --self-test self-test.json
+
+Troubleshooting: runtime fault traces are saved to _internal/app/data/logs/
+when the extracted folder is writable. Main/Settings share their camera session.

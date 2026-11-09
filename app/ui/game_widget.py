@@ -15,7 +15,7 @@ from app.i18n import tr
 from app.input.input_fusion import GameInputState, InputFusion
 from app.settings import load_settings
 from app.input.camera import draw_camera_frame
-from app.input.live_video import LiveVideoWorker
+from app.input.live_video import open_live_video
 
 
 from app.ui.theme import (draw_aurora_background, draw_frosted_glass_card, draw_crystal_note,
@@ -33,7 +33,7 @@ class GameWidget(QWidget):
         self.settings = load_settings()
         self.language = self.settings["language"]
         self.engine = RhythmGameEngine.from_json_file(notes_path) if notes_path else RhythmGameEngine()
-        self.video_worker = LiveVideoWorker(self.settings, enabled=config.USE_CAMERA)
+        self.video_worker = open_live_video(self.main_window, self.settings, enabled=config.USE_CAMERA)
         self.input_fusion = InputFusion(
             use_camera=config.USE_CAMERA and self.settings["camera_enabled"],
             emg_threshold=int(self.settings["emg_threshold"]),

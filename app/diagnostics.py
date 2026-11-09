@@ -98,6 +98,18 @@ def run_self_test(output_path):
         cursor_host.close()
         report['hand_navigation'] = True
         report['checks'].append('App-local cursor ring and fold/double-fold gesture state machine')
+        from app.input.video_session import VideoSession
+        session = VideoSession()
+        first = session.acquire(dict(camera_enabled=False), enabled=False)
+        shared = first._worker
+        first.close()
+        second = session.acquire(dict(camera_enabled=False), enabled=False)
+        assert second._worker is shared
+        second.close()
+        second.close()
+        session.shutdown()
+        report['shared_camera_session'] = True
+        report['checks'].append('Shared camera session reuse and idempotent page release')
         for size in ((1920,1080),(1440,900)):
             widget = Instrument('performance')
             widget.resize(*size)

@@ -10,6 +10,8 @@ flowchart TD
     OPEN --> FOLD[Stable fold locks target and starts 450ms wait]
     FOLD --> AGAIN{Open and fold again before timeout?}
     AGAIN -- No --> CLICK[One app-local click; suppressed in scroll mode]
+    CLICK --> NEXT[Queue navigation after mouse event delivery]
+    NEXT --> SHARE[Next page reuses camera session]
     AGAIN -- Yes --> MODE[Cancel click and toggle scroll mode]
     MODE --> VERTICAL[Vertical hand offset scrolls selected area]
     VERTICAL --> OPEN

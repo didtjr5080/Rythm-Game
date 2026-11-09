@@ -54,6 +54,7 @@ class StartScreen(AuroraScreen):
         self._build()
         self.refresh_saved_songs()
         self.update_selected_panel()
+        self.bio.video_session = getattr(self.main_window, "video_session", None)
         self.bio.start_live()
 
     @property

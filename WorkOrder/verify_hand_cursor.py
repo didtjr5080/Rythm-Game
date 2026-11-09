@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from PyQt6.QtCore import QPointF, Qt
+from PyQt6.QtCore import QEvent, QObject, QPointF, Qt
 from PyQt6.QtGui import QCursor
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QDialog, QListWidget, QMainWindow, QPushButton, QScrollArea, QVBoxLayout, QWidget
@@ -105,6 +105,18 @@ with patch('app.ui.hand_cursor.time.monotonic',side_effect=lambda:clock[0]):
     assert not controller.gestures.scrolling
     controller._click(QPointF(-10,-10))
     assert len(clicks)==1
+    # A Qt hover handler can synchronously resize the page and cancel the pointer.
+    class ResizeOnEnter(QObject):
+        def eventFilter(self, watched, event):
+            if event.type()==QEvent.Type.Enter:
+                root.resize(root.width()-1,root.height()-1)
+            return False
+    controller._suspend()
+    resize_filter=ResizeOnEnter(button)
+    button.installEventFilter(resize_filter)
+    feed(9.,5)
+    assert controller.position is None  # poll must not draw/move a cancelled pointer.
+    button.removeEventFilter(resize_filter)
 assert QCursor.pos()==cursor_before  # No operating-system cursor movement.
 controller.detach(); window.close()
 print('PASS: one fold/one click; double fold suppresses click; scroll on/off and real list movement; stale/focus/modal/ESC guards; transparent circle; no OS cursor movement')

@@ -178,8 +178,11 @@ class HandCursorController(QObject):
         if self.gestures.scrolling:
             self._scroll(dt)
         else:
-            self._move(self.position)
-        if alive(self.overlay): self.overlay.move_ring(self.position, self.gestures.scrolling, self.gestures.waiting_for_second_fold)
+            screen = self.screen
+            self._move(QPointF(self.position))
+            if self.screen is not screen: return
+        if alive(self.overlay) and self.position is not None:
+            self.overlay.move_ring(self.position, self.gestures.scrolling, self.gestures.waiting_for_second_fold)
 
     def _target_at(self, point):
         if not alive(self.screen) or not self.screen.rect().contains(point.toPoint()): return None
@@ -193,25 +196,28 @@ class HandCursorController(QObject):
 
     def _set_hover(self, target):
         if target is self._hover: return
-        if alive(self._hover):
-            self._hover.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
-            QApplication.sendEvent(self._hover, QEvent(QEvent.Type.Leave))
+        previous = self._hover
         self._hover = target
-        if alive(target) and self.position is not None:
+        if alive(previous):
+            previous.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
+            QApplication.sendEvent(previous, QEvent(QEvent.Type.Leave))
+        if self._hover is target and alive(target) and self.position is not None and alive(self.screen):
             global_point = self.screen.mapToGlobal(self.position.toPoint())
             local = QPointF(target.mapFromGlobal(global_point))
             target.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, True)
             QApplication.sendEvent(target, QEnterEvent(local, QPointF(self.window.mapFromGlobal(global_point)), QPointF(global_point)))
 
     def _mouse(self, target, kind, point, button, buttons):
+        if not alive(self.screen) or not alive(target): return
         global_point = self.screen.mapToGlobal(point.toPoint())
         local = QPointF(target.mapFromGlobal(global_point))
         QApplication.sendEvent(target, QMouseEvent(kind, local, QPointF(global_point), button, buttons, Qt.KeyboardModifier.NoModifier))
 
     def _move(self, point):
+        screen = self.screen
         target = self._target_at(point)
         self._set_hover(target)
-        if alive(target):
+        if self.screen is screen and self.position is not None and alive(target):
             self._mouse(target, QEvent.Type.MouseMove, point, Qt.MouseButton.NoButton, Qt.MouseButton.NoButton)
 
     def _click(self, point):

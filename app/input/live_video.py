@@ -5,6 +5,13 @@ import time
 from app.input.camera import CameraSource
 from app.input.mediapipe_tracker import MediaPipeHandTracker
 
+_camera_lifetime_lock = threading.Lock()
+
+
+def open_live_video(owner, settings, enabled=True):
+    session = getattr(owner, 'video_session', None)
+    return session.acquire(settings, enabled) if session is not None else LiveVideoWorker(settings, enabled)
+
 
 class LiveVideoWorker:
     MAX_AGE = .25
@@ -48,7 +55,15 @@ class LiveVideoWorker:
 
     def _run(self):
         camera = tracker = None
+        owns_camera_lock = False
         try:
+            # Closing an old DirectShow graph and opening another must not overlap.
+            self._status = 'WAITING FOR CAMERA'
+            while not self._stop.is_set():
+                if _camera_lifetime_lock.acquire(timeout=.05):
+                    owns_camera_lock = True
+                    break
+            if not owns_camera_lock or self._stop.is_set(): return
             camera = self._camera_factory(self.settings)
             self._status = camera.status
             if camera.capture is None or self._stop.is_set():
@@ -83,12 +98,18 @@ class LiveVideoWorker:
             self._diagnostic = self._status
             self._backend_ready = False
         finally:
-            if tracker is not None:
-                tracker.close()
-            if camera is not None:
-                camera.release()
-            with self._lock:
-                self._snapshot = None
+            try:
+                if tracker is not None:
+                    tracker.close()
+            finally:
+                try:
+                    if camera is not None:
+                        camera.release()
+                finally:
+                    with self._lock:
+                        self._snapshot = None
+                    if owns_camera_lock:
+                        _camera_lifetime_lock.release()
 
     def read(self):
         with self._lock:

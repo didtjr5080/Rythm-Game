@@ -4,6 +4,9 @@ from pathlib import Path
 if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.runtime_logging import install_runtime_logging
+install_runtime_logging()
+
 # MediaPipe must load before PyQt's native DLLs on Windows.
 from app.input.mediapipe_tracker import preload_mediapipe
 preload_mediapipe()
