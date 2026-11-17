@@ -7,7 +7,7 @@ from PyQt6.QtCore import QEvent, QObject, QPoint, QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import QColor, QEnterEvent, QMouseEvent, QPainter, QPen
 from PyQt6.QtWidgets import QApplication, QAbstractScrollArea, QComboBox, QWidget
 
-from app.input.hand_gestures import FoldGestures
+from app.input.hand_gestures import FoldGestures, WristTilt
 from app.ui.theme import lab_font
 
 
@@ -28,17 +28,19 @@ class CursorRing(QWidget):
         self.point = QPointF()
         self.scrolling = False
         self.pending = False
+        self.label = ''
         self.hide()
 
-    def move_ring(self, point, scrolling, pending=False):
+    def move_ring(self, point, scrolling, pending=False, label=''):
         origin = self.parentWidget().mapToGlobal(QPoint(0, 0))
-        if self.isVisible() and self.point == point and self.scrolling == scrolling and self.pending == pending and self.pos() == origin:
+        if self.isVisible() and self.point == point and self.scrolling == scrolling and self.pending == pending and self.label == label and self.pos() == origin:
             return
-        old = QRectF(self.point.x()-105, self.point.y()-28, 210, 58)
+        old = QRectF(self.point.x()-135, self.point.y()-28, 270, 58)
         self.point, self.scrolling = QPointF(point), scrolling
         self.pending = pending
+        self.label = label
         self.move(origin)
-        new = QRectF(point.x()-105, point.y()-28, 210, 58)
+        new = QRectF(point.x()-135, point.y()-28, 270, 58)
         self.update(old.united(new).toAlignedRect())
         if not self.isVisible():
             self.show()
@@ -59,9 +61,9 @@ class CursorRing(QWidget):
         p.drawEllipse(self.point, 16, 16)
         p.setBrush(color)
         p.drawEllipse(self.point, 2, 2)
-        if self.scrolling:
-            x = self.point.x()+24 if self.point.x()+92 < self.width() else self.point.x()-90
-            p.drawText(QRectF(x, self.point.y()-10, 65, 20), 'SCROLL')
+        if self.label or self.scrolling:
+            x = self.point.x()+24 if self.point.x()+125 < self.width() else self.point.x()-125
+            p.drawText(QRectF(x, self.point.y()-10, 100, 20), self.label or 'SCROLL')
 
 
 class HandCursorController(QObject):
@@ -71,12 +73,12 @@ class HandCursorController(QObject):
         self.screen = self.overlay = None
         self._source = None
         self.gestures = FoldGestures()
+        self.wrist = WristTilt()
         self.position = self._target = None
         self._hover = None
         self._stamp = None
         self._last_time = None
         self._scroll_area = None
-        self._scroll_origin = self._hand_y = .5
         self._scroll_fraction = 0.
         self._dispatching = False
         self.timer = QTimer(self)
@@ -101,6 +103,7 @@ class HandCursorController(QObject):
 
     def _suspend(self):
         self.gestures.reset()
+        self.wrist.reset()
         self.position = self._target = None
         self._stamp = self._last_time = None
         self._scroll_area = None
@@ -166,7 +169,6 @@ class HandCursorController(QObject):
         states = hand.get('finger_states') or {}
         fingers = ('index','middle','ring','pinky')
         closed = count == 0 or (all(k in states for k in fingers) and not any(states[k] for k in fingers))
-        self._hand_y = palm[1]
         if self.position is None:
             self.position = QPointF(palm[0]*(self.screen.width()-1), palm[1]*(self.screen.height()-1))
         if not self.gestures.scrolling and count is not None and count >= 3:
@@ -177,7 +179,8 @@ class HandCursorController(QObject):
         action = None
         if stamp != self._stamp:
             self._stamp = stamp
-            action = self.gestures.feed(count, closed, now, QPointF(self.position))
+            direction = self.wrist.feed(hand.get('landmarks_3d'),count,now)
+            action = self.gestures.feed(count, closed, now, QPointF(self.position),direction)
         else:
             action = self.gestures.advance(now)
         if action is not None:
@@ -186,7 +189,6 @@ class HandCursorController(QObject):
                 self._click(point)
                 return
             self._scroll_area = self._find_scroll_area(self.position) if self.gestures.scrolling else None
-            self._scroll_origin = self._hand_y
             self._scroll_fraction = 0.
         if self.gestures.scrolling:
             self._scroll(dt)
@@ -195,7 +197,8 @@ class HandCursorController(QObject):
             self._move(QPointF(self.position))
             if self.screen is not screen: return
         if alive(self.overlay) and self.position is not None:
-            self.overlay.move_ring(self.position, self.gestures.scrolling, self.gestures.waiting_for_second_fold)
+            label = ('SCROLL UP' if self.gestures.scroll_direction < 0 else 'SCROLL DOWN') if self.gestures.scrolling else ('HOLD WRIST' if self.wrist.reference is None else 'WRIST READY') if count == 2 else ''
+            self.overlay.move_ring(self.position, self.gestures.scrolling, self.gestures.waiting_for_second_fold,label)
 
     def _target_at(self, point):
         if not alive(self.screen) or not self.screen.rect().contains(point.toPoint()): return None
@@ -277,12 +280,7 @@ class HandCursorController(QObject):
 
     def _scroll(self, dt):
         if not alive(self._scroll_area): return
-        displacement = self._hand_y-self._scroll_origin
-        if abs(displacement)<.04:
-            self._scroll_fraction = 0.
-            return
-        rate = math.copysign(min(1., (abs(displacement)-.04)/.16)*12, displacement)
-        self._scroll_fraction += rate*dt
+        self._scroll_fraction += self.gestures.scroll_direction*10*dt
         steps = int(self._scroll_fraction)
         if steps:
             self._scroll_fraction -= steps

@@ -1,4 +1,5 @@
-"""App-local pointer, fold disambiguation, scroll mode, scope and focus guards."""
+"""App-local pointer, two-finger wrist tilt, scope and focus guards."""
+import math
 import os
 import sys
 from pathlib import Path
@@ -23,8 +24,24 @@ assert g.advance(2.) is None  # Held fist never repeats.
 g.reset()
 for t,c in ((0.,5),(.12,5),(.16,0),(.26,0),(.30,5),(.42,5),(.46,0)):
     assert g.feed(c,c==0,t,'anchor') is None
-assert g.feed(0,True,.56,'anchor') == ('scroll','anchor')
+assert g.feed(0,True,.56,'anchor') is None
+assert not g.scrolling
+assert g.advance(2.) == ('click','anchor')  # Double fist no longer toggles scrolling.
+
+g.reset()
+for t,c in ((0.,5),(.12,5),(.16,0),(.26,0)):
+    g.feed(c,c==0,t,'anchor')
+assert g.feed(2,False,.30,'anchor',-1) is None
+assert g.feed(2,False,.42,'anchor',-1) == ('scroll','anchor')
 assert g.scrolling and g.advance(2.) is None
+assert g.feed(0,True,2.1,'anchor') == ('scroll','anchor')
+assert not g.scrolling and g.advance(2.8) is None
+
+g.reset()
+for t,c in ((0.,5),(.12,5),(.14,2),(.16,0),(.26,0),(.30,2),(.34,5)):
+    assert g.feed(c,c==0,t,'transition') is None
+assert not g.scrolling
+assert g.advance(.72) == ('click','transition')  # Brief two-finger transition preserves fist clicks.
 g.reset()
 assert g.feed(0,True,3.,'unarmed') is None
 assert g.feed(0,True,4.,'unarmed') is None
@@ -55,10 +72,13 @@ button.clicked.connect(lambda: clicks.append(True))
 clock = [0.]
 cursor_before = QCursor.pos()
 
-def feed(t, count, point=None, visible=True):
+def feed(t, count, point=None, visible=True, tilt=0):
     clock[0] = t
     if point is None: point = QPointF(button.mapTo(root,button.rect().center()))
-    source.sample = (t, dict(hand_visible=visible, finger_count=count,
+    points=[(0.,0.,0.) for _ in range(21)]
+    for index,x in zip((5,9,13,17),(-.03,-.01,.01,.03)):
+        points[index]=(x,-.1,.1*math.tan(math.radians(tilt)))
+    source.sample = (t, dict(hand_visible=visible, finger_count=count, landmarks_3d=points,
         x=.15+.7*point.x()/(root.width()-1), y=.12+.76*point.y()/(root.height()-1),
         finger_states=dict.fromkeys(('thumb','index','middle','ring','pinky'), count!=0)))
     controller.poll()
@@ -71,17 +91,31 @@ with patch('app.ui.hand_cursor.time.monotonic',side_effect=lambda:clock[0]):
     assert controller._target_at(controller.position) is button  # Transparent overlay.
     controller._suspend()
     anchor=QPointF(listing.viewport().mapTo(root,listing.viewport().rect().center()))
-    for t,c in ((2.,5),(2.12,5),(2.16,0),(2.26,0),(2.30,5),(2.42,5),(2.46,0),(2.56,0)):
+    for t,c in ((2.,2),(2.15,2),(2.3,2),(2.45,2)):
         feed(t,c,anchor)
-    assert controller.gestures.scrolling and len(clicks)==1
+    assert controller.wrist.reference is not None and not controller.gestures.scrolling
+    listing.verticalScrollBar().setValue(50)
+    up=QPointF(anchor.x(),max(2,anchor.y()-root.height()*.25))
+    feed(2.5,2,up)
+    assert listing.verticalScrollBar().value()==50  # Position movement alone is not wrist tilt.
+    for t in (2.6,2.72,2.78):feed(t,2,anchor,tilt=25)
+    assert controller.gestures.scrolling and controller.gestures.scroll_direction==-1
     assert controller._scroll_area is listing
-    down=QPointF(anchor.x(),min(root.height()-2,anchor.y()+root.height()*.25))
-    for i in range(20): feed(2.6+i*.05,5,down)
-    assert listing.verticalScrollBar().value()>0
+    assert listing.verticalScrollBar().value()<50
+    held=listing.verticalScrollBar().value()
+    for i in range(6):feed(2.85+i*.05,2,anchor,tilt=25)
+    assert listing.verticalScrollBar().value()<held  # Hold extension to scroll upward.
+    feed(3.2,2,anchor)
+    held=listing.verticalScrollBar().value()
+    feed(3.3,2,anchor)
+    assert not controller.gestures.scrolling and listing.verticalScrollBar().value()==held
+    for t in (3.4,3.52,3.58,3.65,3.72,3.8):feed(t,2,anchor,tilt=-25)
+    assert controller.gestures.scroll_direction==1 and listing.verticalScrollBar().value()>held
     app.processEvents()
     assert window.grab().save(str(Path(__file__).with_name('hand_cursor_preview.png')))
-    for t,c in ((4.,5),(4.12,5),(4.16,0),(4.26,0),(4.30,5),(4.42,5),(4.46,0),(4.56,0)):
-        feed(t,c,anchor)
+    feed(4.,2,anchor)
+    feed(4.1,0,anchor)
+    feed(4.2,0,anchor)
     assert not controller.gestures.scrolling and len(clicks)==1
     # Tracking loss cancels a pending click; returning with a fist cannot arm.
     controller._suspend()
@@ -119,7 +153,7 @@ with patch('app.ui.hand_cursor.time.monotonic',side_effect=lambda:clock[0]):
     button.removeEventFilter(resize_filter)
 assert QCursor.pos()==cursor_before  # No operating-system cursor movement.
 controller.detach(); window.close()
-print('PASS: one fold/one click; double fold suppresses click; scroll on/off and real list movement; stale/focus/modal/ESC guards; transparent circle; no OS cursor movement')
+print('PASS: fist click; two-finger wrist extension up/flexion down; neutral stop; position-only motion ignored; stale/focus/modal/ESC guards; no OS cursor movement')
 
 from app import config
 config.USE_CAMERA=False; config.USE_MOCK_EMG=True

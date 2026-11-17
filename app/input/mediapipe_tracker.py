@@ -127,6 +127,7 @@ class MediaPipeHandTracker:
                         "hand_label": hand_label,
                         "frame": detected_frame,
                         "landmarks": [(1.0-point.x if x_mirror else point.x, point.y) for point in landmarks],
+                        "landmarks_3d": [(point.x*aspect, point.y, point.z*aspect) for point in landmarks],
                     }
                 )
 

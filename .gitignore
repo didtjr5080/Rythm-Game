@@ -46,6 +46,7 @@ ENV/
 .venv*/
 dist_*/
 release/
+backups/
 WorkOrder/*_preview.png
 WorkOrder/*_1920x1080.png
 WorkOrder/*_1440x900.png

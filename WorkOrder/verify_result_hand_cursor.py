@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory() as folder,patch.object(ResultsBrowserScreen,'
     cursor=window.hand_cursor;cursor.timer.stop()
     cursor.position=QPointF(browser.result_list.mapTo(browser,browser.result_list.rect().center()))
     cursor.gestures.scrolling=True;cursor._scroll_area=browser.result_list
-    cursor._scroll_origin=.5;cursor._hand_y=.8
+    cursor.gestures.scroll_direction=1
     for _ in range(20):cursor._scroll(.05)
     assert browser.result_list.verticalScrollBar().value()>0
     viewport=browser.result_list.viewport()

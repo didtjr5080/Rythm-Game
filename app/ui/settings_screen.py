@@ -1,7 +1,10 @@
+import time
+
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -19,6 +22,8 @@ from app import config
 from app.input.live_video import open_live_video
 from app.input.emg_devices import discover_emg_devices
 from app.input.emg_reader import SerialEMGReader
+from app.input.emg_processing import calibration_thresholds
+from statistics import median
 from app.input.mock_emg_reader import MockEMGReader
 from app.input.camera import rgb_pixmap
 from app.ui.theme import draw_hand_skeleton_overlay, finger_summary
@@ -66,7 +71,12 @@ class SettingsScreen(QWidget):
         self.judge_line_slider, self.judge_line_value = self._slider(
             55, 92, int(self.settings["judgement_line_y_ratio"] * 100)
         )
-        self.emg_threshold_slider, self.emg_threshold_value = self._slider(0, 1000, int(self.settings["emg_threshold"]))
+        self.emg_threshold_slider = QDoubleSpinBox()
+        self.emg_threshold_slider.setRange(0, 1023)
+        self.emg_threshold_slider.setDecimals(3)
+        self.emg_threshold_slider.setSingleStep(.1)
+        self.emg_threshold_slider.setValue(self.settings['emg_threshold'])
+        self.emg_threshold_value = QLabel()
         self.emg_mode_combo = QComboBox()
         self.emg_mode_combo.addItem('Real EMG sensor', 'serial')
         self.emg_mode_combo.addItem('Demo / SPACE input', 'mock')
@@ -76,12 +86,17 @@ class SettingsScreen(QWidget):
         for baud in (9600,57600,115200): self.emg_baud_combo.addItem(str(baud),baud)
         self.emg_baud_combo.setCurrentIndex(self.emg_baud_combo.findData(self.settings['emg_baudrate']))
         self.emg_signal_combo = QComboBox()
-        self.emg_signal_combo.addItem('Filtered activity / raw EMG sensor', 'envelope')
-        self.emg_signal_combo.addItem('Direct A0 / sensor ENV output', 'raw')
+        self.emg_signal_combo.addItem('Filtered activity / SZH-GJD001 firmware RMS', 'envelope')
+        self.emg_signal_combo.addItem('NO BANDPASS / DC removed RMS (comparison)', 'unfiltered')
+        self.emg_signal_combo.addItem('Direct A0 / ENV sensors (not SZH-GJD001)', 'raw')
         self.emg_signal_combo.setCurrentIndex(max(0,self.emg_signal_combo.findData(self.settings['emg_signal'])))
         self.emg_status = QLabel('Connect the EMG board by USB, refresh devices, then test.')
         self.emg_status.setWordWrap(True)
         self.emg_test_reader = None
+        self.emg_calibration_phase = None
+        self.emg_rest_samples = None
+        self.emg_calibration_samples = []
+        self.emg_release_threshold = self.settings['emg_release_threshold']
         self.emg_devices = []
         self.emg_timer = QTimer(self)
         self.emg_timer.timeout.connect(self.refresh_emg_test)
@@ -90,7 +105,7 @@ class SettingsScreen(QWidget):
         self.refresh_emg_devices()
         self.device_timer.start(2000)
         for combo in (self.emg_mode_combo,self.emg_port_combo,self.emg_baud_combo,self.emg_signal_combo):
-            combo.currentIndexChanged.connect(self.stop_emg_test)
+            combo.currentIndexChanged.connect(self.emg_source_changed)
         self._build()
 
     def _slider(self, minimum: int, maximum: int, value: int):
@@ -114,7 +129,7 @@ class SettingsScreen(QWidget):
         subtitle.setObjectName("subtitle")
         outer.addWidget(title)
         outer.addWidget(subtitle)
-        hand_help=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL')
+        hand_help=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / 2 FINGERS + WRIST BACK/IN = SCROLL UP/DOWN / STRAIGHT = STOP')
         hand_help.setObjectName('subtitle'); hand_help.setWordWrap(True)
         outer.addWidget(hand_help)
 
@@ -159,6 +174,15 @@ class SettingsScreen(QWidget):
         layout.addWidget(QLabel('EMG signal type'),17,0); layout.addWidget(self.emg_signal_combo,17,1)
         connect=QPushButton('Connect / Test EMG'); connect.clicked.connect(self.start_emg_test); layout.addWidget(connect,18,0)
         layout.addWidget(self.emg_status,18,1,1,2)
+        rest = QPushButton('1. 안정 상태 측정 (힘 빼기)')
+        rest.clicked.connect(lambda: self.start_emg_calibration('rest'))
+        active = QPushButton('2. 3회 반복 수축 / 임계값 자동 보정')
+        active.clicked.connect(lambda: self.start_emg_calibration('active'))
+        layout.addWidget(rest,19,0)
+        layout.addWidget(active,19,1,1,2)
+        self.emg_calibration_status = QLabel('안정 측정 약 4초 → 안내에 따라 힘빼기/수축 3회 약 12초 → Save로 저장')
+        self.emg_calibration_status.setWordWrap(True)
+        layout.addWidget(self.emg_calibration_status,20,0,1,3)
         outer.addWidget(panel)
 
         row = QHBoxLayout()
@@ -179,6 +203,7 @@ class SettingsScreen(QWidget):
         self.note_speed_slider.valueChanged.connect(lambda value: self.update_label(self.note_speed_value, value, ""))
         self.judge_line_slider.valueChanged.connect(lambda value: self.update_label(self.judge_line_value, value, "%"))
         self.emg_threshold_slider.valueChanged.connect(lambda value: self.update_label(self.emg_threshold_value, value, ""))
+        self.emg_threshold_slider.valueChanged.connect(self.clear_emg_release)
         self.refresh_labels()
 
     def _setup_combo_boxes(self):
@@ -248,7 +273,8 @@ class SettingsScreen(QWidget):
             self.emg_test_reader=MockEMGReader(threshold)
         else:
             self.emg_test_reader=SerialEMGReader(port=settings['emg_port'],baudrate=settings['emg_baudrate'],
-                threshold=threshold,device_id=settings['emg_device_id'],signal=settings['emg_signal'])
+                threshold=threshold,device_id=settings['emg_device_id'],signal=settings['emg_signal'],
+                release_threshold=self.emg_release_threshold)
         self.emg_timer.start(33)
         self.refresh_emg_test()
 
@@ -258,10 +284,114 @@ class SettingsScreen(QWidget):
         reader.threshold=self.emg_threshold_slider.value()
         value,activated=reader.read()
         status=getattr(reader,'status','MOCK EMG / SPACE')
-        self.emg_status.setText(f'{status} / VALUE: {value:.0f} / ACTIVE: {activated} / '+
-            f"RAW: {getattr(reader,'raw_value',value):.0f} / FILTERED: {getattr(reader,'envelope_value',value):.0f}")
+        self.emg_status.setText(f'{status} / VALUE: {value:.2f} / ACTIVE: {activated} / '+
+            f"RAW: {getattr(reader,'raw_value',value):.0f} / ACTIVITY: {value:.2f} / ON: {reader.threshold:.3f} / OFF: {getattr(reader,'release_level',reader.threshold*.6):.3f}")
+        if getattr(reader, 'bypass_available', False):
+            self.emg_status.setText(self.emg_status.text()+f' / BP RMS: {reader.envelope_value:.0f} / NO BP RMS: {reader.unfiltered_value:.0f}')
+        self.emg_status.setText(self.emg_status.text()+(' / DIR: DOWN' if getattr(reader,'falling_activation',False) else ' / DIR: UP'))
+        self.collect_emg_calibration(reader)
+
+    def start_emg_calibration(self, phase):
+        if self.emg_calibration_phase is not None:
+            return
+        if self.emg_mode_combo.currentData() != 'serial':
+            self.emg_calibration_status.setText('자동 보정은 실제 EMG 센서 모드에서 진행하세요.')
+            return
+        if phase == 'active' and self.emg_rest_samples is None:
+            self.emg_calibration_status.setText('먼저 1번 안정 상태 측정을 진행하세요.')
+            return
+        if self.emg_test_reader is None:
+            self.start_emg_test()
+        reader = self.emg_test_reader
+        if isinstance(reader, SerialEMGReader) and reader.board_name == 'ESP8266_A0':
+            if reader.firmware_version != 2 or reader.signal not in ('envelope', 'unfiltered'):
+                self.emg_calibration_status.setText('SZH-GJD001: 펌웨어 v2와 RMS 신호 종류를 선택한 뒤 보정하세요.')
+                return
+            if reader.signal == 'unfiltered' and not reader.bypass_available:
+                self.emg_calibration_status.setText('비교용 펌웨어가 필요합니다. NO BANDPASS 데이터 수신 후 보정하세요.')
+                return
+        if reader.serial is None or time.monotonic()-reader._last_sample >= .15:
+            self.emg_calibration_status.setText('Connect / Test EMG로 연결한 뒤 신호가 들어오면 다시 누르세요.')
+            return
+        if phase == 'rest':
+            self.emg_rest_samples = None
+        self.emg_calibration_phase = phase
+        self.emg_calibration_started = time.monotonic()
+        self.emg_calibration_samples = []
+        self.emg_contractions = [[], [], []]
+        self.emg_recoveries = [[], [], []]
+        self.emg_threshold_slider.setEnabled(False)
+        self.emg_calibration_status.setText('힘을 빼고 유지하세요.' if phase == 'rest' else '1/3: 먼저 힘을 빼세요. 화면 안내에 따라 힘빼기/수축을 반복합니다.')
+
+    def collect_emg_calibration(self, reader):
+        phase = self.emg_calibration_phase
+        if phase is None:
+            return
+        now = time.monotonic()
+        if reader.serial is None or now-reader._last_sample >= .15:
+            self.emg_calibration_phase = None
+            self.emg_rest_samples = None
+            self.emg_threshold_slider.setEnabled(True)
+            self.emg_calibration_status.setText('신호가 끊겨 보정을 취소했습니다. 안정 측정부터 다시 진행하세요.')
+            return
+        elapsed = now-self.emg_calibration_started
+        # Discard each transition; collect actual packets into three separate repetitions.
+        duration = 3.75 if phase == 'rest' else 12.0
+        if phase == 'rest':
+            if .75 <= elapsed < duration:
+                self.emg_calibration_samples.extend(reader.samples)
+            instruction = f'힘 빼기: {max(0,duration-elapsed):.1f}초'
+        else:
+            step = min(int(elapsed//2), 5)
+            within = elapsed-step*2
+            contraction = step%2 == 1
+            blocks = self.emg_contractions if contraction else self.emg_recoveries
+            if elapsed < duration and .5 <= within < 2:
+                blocks[step//2].extend(reader.samples)
+            instruction = f'{step//2+1}/3: '+('힘을 주세요' if contraction else '힘을 빼세요')+f' / {max(0,2-within):.1f}초'
+        self.emg_calibration_status.setText(instruction)
+        if elapsed < duration:
+            return
+        self.emg_calibration_phase = None
+        self.emg_threshold_slider.setEnabled(True)
+        samples = self.emg_calibration_samples
+        if phase == 'rest':
+            if not samples:
+                self.emg_calibration_status.setText('안정 측정값이 없습니다. 연결을 확인하고 다시 측정하세요.')
+                return
+            self.emg_rest_samples = samples
+            self.emg_calibration_status.setText(f'안정 측정 완료: 중앙값 {median(samples):.2f}. 2번을 누르고 안내에 따라 힘빼기/수축을 3회 반복하세요.')
+            return
+        try:
+            threshold, release = calibration_thresholds(self.emg_rest_samples, self.emg_contractions, self.emg_recoveries)
+        except ValueError as exc:
+            self.emg_calibration_status.setText(str(exc))
+            return
+        self.emg_threshold_slider.setValue(threshold)
+        self.emg_release_threshold = release
+        reader.set_thresholds(threshold, release)
+        repeats = '/'.join(f'{median(block):.2f}' for block in self.emg_contractions)
+        direction = '감소형' if reader.falling_activation else '증가형'
+        self.emg_calibration_status.setText(f'측정값 보정 적용 ({direction}): 초기 안정 {median(self.emg_rest_samples):.2f} / 수축 3회 {repeats} / ON {threshold:.3f} / OFF {release:.3f}. Save로 저장하세요.')
+
+    def clear_emg_release(self, *_args):
+        self.emg_release_threshold = None
+        if isinstance(self.emg_test_reader, SerialEMGReader):
+            self.emg_test_reader.set_thresholds(self.emg_threshold_slider.value())
+
+    def emg_source_changed(self, *_args):
+        self.clear_emg_release()
+        self.stop_emg_test()
 
     def stop_emg_test(self,*_args):
+        self.emg_calibration_phase = None
+        self.emg_rest_samples = None
+        self.emg_calibration_samples = []
+        self.emg_contractions = [[], [], []]
+        self.emg_recoveries = [[], [], []]
+        self.emg_threshold_slider.setEnabled(True)
+        if hasattr(self, 'emg_calibration_status'):
+            self.emg_calibration_status.setText('보정 초기화: 안정 측정 → 수축 측정 순서로 진행하세요.')
         self.emg_timer.stop()
         if self.emg_test_reader is not None: self.emg_test_reader.close()
         self.emg_test_reader=None
@@ -344,11 +474,12 @@ class SettingsScreen(QWidget):
         self.stop_camera_preview(); super().hideEvent(event)
 
     def reset_defaults(self):
+        self.clear_emg_release()
         self.stop_emg_test()
         self.emg_mode_combo.setCurrentIndex(0)
         self.emg_port_combo.setCurrentIndex(0)
         self.emg_baud_combo.setCurrentIndex(self.emg_baud_combo.findData(DEFAULT_SETTINGS['emg_baudrate']))
-        self.emg_signal_combo.setCurrentIndex(0)
+        self.emg_signal_combo.setCurrentIndex(max(0,self.emg_signal_combo.findData(DEFAULT_SETTINGS['emg_signal'])))
         self.stop_camera_preview()
         self.camera_enabled_checkbox.setChecked(DEFAULT_SETTINGS['camera_enabled'])
         self.camera_index_combo.setCurrentIndex(DEFAULT_SETTINGS['camera_index'])
@@ -363,7 +494,7 @@ class SettingsScreen(QWidget):
         self.volume_slider.setValue(int(DEFAULT_SETTINGS["music_volume"] * 100))
         self.note_speed_slider.setValue(int(DEFAULT_SETTINGS["note_speed"]))
         self.judge_line_slider.setValue(int(DEFAULT_SETTINGS["judgement_line_y_ratio"] * 100))
-        self.emg_threshold_slider.setValue(int(DEFAULT_SETTINGS["emg_threshold"]))
+        self.emg_threshold_slider.setValue(DEFAULT_SETTINGS["emg_threshold"])
 
     def save_and_back(self):
         defer = getattr(self.main_window, '_defer_hand_navigation', None)
@@ -388,6 +519,7 @@ class SettingsScreen(QWidget):
                 "note_speed": self.note_speed_slider.value(),
                 "judgement_line_y_ratio": self.judge_line_slider.value() / 100.0,
                 "emg_threshold": self.emg_threshold_slider.value(),
+                "emg_release_threshold": self.emg_release_threshold,
             }
         )
         self.main_window.show_start_screen()

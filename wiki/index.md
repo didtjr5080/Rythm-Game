@@ -89,3 +89,25 @@ Windows 실행 파일 배포
 
 - [EXTRACTED: Windows EXE 다운로드·빌드·검사 안내](../docs/windows-release.md)
 - EXTRACTED: 같은 안내의 아이콘 항목에서 사용자 제공 PNG의 ICO 변환과 EXE·창 아이콘 적용 경로를 확인할 수 있습니다.
+
+- [EXTRACTED: EMG 필터링·설정 화면 자동 임계값 보정](../docs/emg-auto-calibration.md) — [Mermaid 흐름](../diagrams/emg-auto-calibration.md)
+
+- EXTRACTED: 자동 EMG 보정 포함 Windows 빌드 2026.11.17.3 생성·EXE 자체 검사 통과. [배포 안내](../docs/windows-release.md)
+
+- [EXTRACTED: SZH-GJD001 센서 전용 500Hz·60–100Hz 필터와 RMS, COM3 백업·업로드·실수신](../docs/szh-gjd001-filter.md) — Windows 2026.11.17.4, [Mermaid](../diagrams/emg-auto-calibration.md)
+
+- [EXTRACTED: 높은 안정 신호에서 자동 보정 실패 수정 — ON/OFF 분리 저장](../docs/emg-calibration-hysteresis.md) — Windows 2026.11.17.5, 검사 24개 및 EXE 자체 검사 통과.
+
+- [EXTRACTED: 대역통과 필터 우회 비교 빌드](../docs/emg-no-bandpass-comparison.md) — 별도 No-Bandpass EXE 2026.11.17.6, COM3에서 BP RMS/NO BP RMS 동시 수신 확인. [Mermaid](../diagrams/emg-auto-calibration.md)
+
+- [EXTRACTED: 고정 차이 5 제거, 안정 흔들림·3회 반복 수축 기반 보정](../docs/emg-adaptive-calibration.md) — 소수점 ON/OFF 게임 전달, Windows 2026.11.17.7, 검사 31개 및 EXE 자체 검사 통과.
+
+- [EXTRACTED: 측정값 직접 보정 — 차이·잡음·분리 거부 조건 제거, 증가/감소형 적용](../docs/emg-direct-calibration.md) — Windows 2026.11.17.8, 검사 33개·EXE 자체 검사 통과.
+
+- [EXTRACTED: 게임의 100% 초과 표시 수정 — 실제 EMG 활동값·ON/OFF 표시와 저장값 유지 검증](../docs/emg-game-display.md) — Windows 2026.11.17.9, 검사 34개·EXE 자체 검사 통과.
+
+- [EXTRACTED: 최신 Windows 버전과 구버전 정리·데이터 백업](../docs/version-cleanup.md) — 2026.11.17.10, dist_windows_current로 통일. [두 손가락 드래그 스크롤](../docs/hand-cursor.md), [Mermaid](../diagrams/hand-cursor.md).
+
+- [EXTRACTED: 두 손가락 손목 기울기 스크롤](../docs/hand-cursor.md) — 중립 유지 → 손목 뒤로 젖힘: 위 / 안쪽 굽힘: 아래 / 중립: 정지. v2026.11.17.11, 현재 실행 경로 유지·런타임 51개 백업/이관. [Mermaid](../diagrams/hand-cursor.md).
+
+- [EXTRACTED: ?? ??? ?? 5? ?? PPT ? 3? ?? + 2? ?? ??](../docs/presentation/README.md) ? [?? ?? ??](../diagrams/presentation-flow.md)

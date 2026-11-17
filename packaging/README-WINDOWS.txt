@@ -5,9 +5,11 @@ Keep _internal next to the EXE; copying only the EXE will not work.
 No Python installation is required. Music and personal runtime data are not bundled.
 
 Hand navigation (Main, Settings, post-game Results and saved Results):
-- Open hand: move green ring. Fold once: click after a short double-fold wait.
-- Two quick folds: toggle scroll mode (purple ring). Move hand up/down to scroll.
-- Two quick folds again or ESC: cancel scroll mode.
+- Open hand: move green ring. Fold once: click after a short confirmation delay.
+- Face the palm toward the camera, keep the forearm still, and extend TWO fingers.
+- Hold the wrist straight briefly (HOLD WRIST -> WRIST READY).
+- Bend the wrist back for SCROLL UP; bend inward for SCROLL DOWN.
+- Return the wrist to neutral or release the two-finger pose to stop. ESC resets.
 - No OS mouse movement; other applications, gameplay and calibration screens are excluded.
 
 Settings:

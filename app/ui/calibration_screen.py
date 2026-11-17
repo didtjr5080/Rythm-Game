@@ -1,7 +1,7 @@
 from collections import deque
 from PyQt6.QtCore import Qt, QTimer, QRectF
 from PyQt6.QtGui import QPainter
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 from app import config
 from app.input.camera import rgb_pixmap
 from app.input.input_fusion import InputFusion
@@ -38,7 +38,7 @@ class CalibrationScreen(AuroraScreen):
         center=GlassPanel('NEURO-MOTOR PERFORMANCE REPORT'); cl=QVBoxLayout(center); cl.setContentsMargins(16,44,16,18); cl.addWidget(Instrument('performance'))
         right=GlassPanel('LIVE BIO-CALIBRATION'); rl=QVBoxLayout(right); rl.setContentsMargins(16,44,16,18)
         self.bio=Instrument('bio'); rl.addWidget(self.bio,1)
-        self.slider=QSlider(Qt.Orientation.Horizontal); self.slider.setRange(0,max(580,self.settings['emg_threshold'])); self.slider.setValue(self.settings['emg_threshold']); self.slider.valueChanged.connect(self.update_threshold); rl.addWidget(self.slider)
+        self.slider=QDoubleSpinBox(); self.slider.setDecimals(3); self.slider.setSingleStep(.1); self.slider.setRange(0,1023); self.slider.setValue(self.settings['emg_threshold']); self.slider.valueChanged.connect(self.update_threshold); rl.addWidget(self.slider)
         self.threshold_label=QLabel(); rl.addWidget(self.threshold_label)
         for panel in (left,center,right): row.addWidget(panel,1)
         outer.addLayout(row,1)
@@ -48,10 +48,13 @@ class CalibrationScreen(AuroraScreen):
         self.update_threshold(self.slider.value()); self.refresh()
 
     def update_threshold(self,value):
+        if self.reader.threshold != value and hasattr(self.reader, 'set_thresholds'):
+            self.reader.set_thresholds(value)
         self.reader.threshold=value; self.bio.threshold=value; self.bio.update()
         self.threshold_label.setText(f'THRESHOLD: {value}')
 
     def save_calibration(self):
+        self.settings['emg_release_threshold']=getattr(self.reader,'release_threshold',None)
         self.settings['emg_threshold']=self.slider.value(); save_settings(self.settings)
         self.threshold_label.setText(f'SAVED THRESHOLD: {self.slider.value()}')
 

@@ -1,0 +1,2 @@
+Comparison build default: DC-centered 40 ms RMS, without the 60-100 Hz bandpass.
+PC median/EMA conditioning and ON/OFF detection are shared with the filtered mode.

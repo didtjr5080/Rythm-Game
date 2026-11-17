@@ -37,7 +37,7 @@ class GameWidget(QWidget):
         self.video_worker = open_live_video(self.main_window, self.settings, enabled=config.USE_CAMERA)
         self.input_fusion = InputFusion(
             use_camera=config.USE_CAMERA and self.settings["camera_enabled"],
-            emg_threshold=int(self.settings["emg_threshold"]),
+            emg_threshold=self.settings["emg_threshold"],
             camera_flip=bool(self.settings["camera_flip"]),
             hand_tracker=self.video_worker if config.USE_CAMERA and self.settings['camera_enabled'] else None,
             produce_rgb=False,
@@ -335,8 +335,12 @@ class GameWidget(QWidget):
         draw_frosted_glass_card(p,QRectF(42,100,282,190),'EMG DSP FILTER & THRESHOLD')
         draw_waveform(p,QRectF(62,155,242,105),self.raw_history,self.filtered_history)
         draw_frosted_glass_card(p,QRectF(42,320,250,220),'EMG BIO-SIGNAL')
-        ratio=self.input_fusion.emg_mvc_ratio
-        draw_circular_gauge(p,QRectF(88,357,157,157),ratio,f'{ratio*100:.0f}%','MVC ACTIVE')
+        reader=self.input_fusion.emg_reader
+        active=self.current_input.emg_activated
+        draw_circular_gauge(p,QRectF(88,350,157,137),float(active),f'{self.current_input.emg_value:.2f}','ACTIVE' if active else 'REST')
+        release=getattr(reader,'release_level',reader.threshold*.6)
+        direction='DOWN' if getattr(reader,'falling_activation',False) else 'UP'
+        text(p,QRectF(50,491,234,20),f'ON {reader.threshold:.3f} / OFF {release:.3f} / {direction}',8,'#94A3B8')
         text(p,QRectF(50,516,234,18),getattr(self.input_fusion.emg_reader,'status','MOCK EMG'),8,'#94A3B8')
         if self.settings.get('show_camera_debug', True): self._draw_camera_hud(p)
         self._draw_score_hud(p)

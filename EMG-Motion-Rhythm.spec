@@ -4,6 +4,10 @@ from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
 from pathlib import Path
 import os
 
+no_bandpass_build = os.environ.get('EMG_NO_BANDPASS_BUILD') == '1'
+bundle_name = 'EMG-Motion-Rhythm-No-Bandpass' if no_bandpass_build else 'EMG-Motion-Rhythm'
+comparison_datas = [('packaging/no_bandpass.marker', 'app')] if no_bandpass_build else []
+
 runtime_dir = Path(os.environ.get("SystemRoot", "C:/Windows")) / "System32"
 cpp_runtimes = [(str(runtime_dir/name), ".") for name in (
     "MSVCP140.dll", "MSVCP140_1.dll", "MSVCP140_2.dll", "CONCRT140.dll",
@@ -29,7 +33,7 @@ a = Analysis(
     ['app\\main.py'],
     pathex=['legacy_web/backend'],
     binaries=mediapipe_binaries + cpp_runtimes,
-    datas=[('app/data/songs/.gitkeep', 'app/data/songs'), ('app/assets', 'app/assets')] + mediapipe_datas,
+    datas=[('app/data/songs/.gitkeep', 'app/data/songs'), ('app/assets', 'app/assets')] + mediapipe_datas + comparison_datas,
     hiddenimports=mediapipe_hiddenimports + ['audio_analyzer', 'note_generator'],
     hookspath=[],
     hooksconfig={},
@@ -61,7 +65,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='EMG-Motion-Rhythm',
+    name=bundle_name,
     icon='app/assets/app.ico',
     debug=False,
     bootloader_ignore_signals=False,
@@ -81,5 +85,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='EMG-Motion-Rhythm',
+    name=bundle_name,
 )

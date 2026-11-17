@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 
 
@@ -17,11 +18,12 @@ DEFAULT_SETTINGS = {
     "note_speed": 360,
     "judgement_line_y_ratio": 0.82,
     "emg_threshold": 12,
+    "emg_release_threshold": None,
     "emg_input_mode": "serial",
     "emg_port": "auto",
     "emg_device_id": "",
     "emg_baudrate": 115200,
-    "emg_signal": "envelope",
+    "emg_signal": "unfiltered" if Path(__file__).with_name('no_bandpass.marker').is_file() else "envelope",
 }
 
 CAMERA_RESOLUTIONS = ("640x480", "1280x720", "1920x1080")
@@ -63,6 +65,24 @@ def settings_path() -> Path:
     return Path(__file__).resolve().parent / "data" / "settings.json"
 
 
+def normalize_emg_release(value):
+    if value is None:
+        return None
+    try:
+        release = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return release if math.isfinite(release) and 0 <= release <= 1023 else None
+
+
+def normalize_emg_threshold(value):
+    try:
+        level = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return float(DEFAULT_SETTINGS['emg_threshold'])
+    return round(max(0.0, min(1023.0, level)), 3) if math.isfinite(level) else float(DEFAULT_SETTINGS['emg_threshold'])
+
+
 def load_settings() -> dict:
     path = settings_path()
     if not path.exists():
@@ -75,7 +95,7 @@ def load_settings() -> dict:
     settings = dict(DEFAULT_SETTINGS)
     settings.update({key: data[key] for key in DEFAULT_SETTINGS if key in data})
     for key, choices, default in (("emg_input_mode", ("serial", "mock"), "serial"),
-                                  ("emg_signal", ("envelope", "raw"), "envelope"),
+                                  ("emg_signal", ("envelope", "raw", "unfiltered"), DEFAULT_SETTINGS['emg_signal']),
                                   ("emg_baudrate", (9600, 57600, 115200), 115200)):
         if settings[key] not in choices: settings[key] = default
     for key, default in (("emg_port", "auto"), ("emg_device_id", "")):
@@ -93,7 +113,8 @@ def load_settings() -> dict:
     settings["music_volume"] = max(0.0, min(1.0, float(settings["music_volume"])))
     settings["note_speed"] = max(200, min(900, int(settings["note_speed"])))
     settings["judgement_line_y_ratio"] = max(0.55, min(0.92, float(settings["judgement_line_y_ratio"])))
-    settings["emg_threshold"] = max(0, min(1000, int(settings["emg_threshold"])))
+    settings["emg_threshold"] = normalize_emg_threshold(settings["emg_threshold"])
+    settings["emg_release_threshold"] = normalize_emg_release(settings["emg_release_threshold"])
     settings["show_game_hud"] = bool(settings["show_game_hud"])
     settings["show_judgement_text"] = bool(settings["show_judgement_text"])
     settings["show_camera_debug"] = bool(settings["show_camera_debug"])
@@ -105,7 +126,7 @@ def save_settings(settings: dict) -> dict:
     merged = dict(DEFAULT_SETTINGS)
     merged.update({key: settings[key] for key in DEFAULT_SETTINGS if key in settings})
     for key, choices, default in (("emg_input_mode", ("serial", "mock"), "serial"),
-                                  ("emg_signal", ("envelope", "raw"), "envelope"),
+                                  ("emg_signal", ("envelope", "raw", "unfiltered"), DEFAULT_SETTINGS['emg_signal']),
                                   ("emg_baudrate", (9600, 57600, 115200), 115200)):
         if merged[key] not in choices: merged[key] = default
     for key, default in (("emg_port", "auto"), ("emg_device_id", "")):
@@ -123,7 +144,8 @@ def save_settings(settings: dict) -> dict:
     merged["music_volume"] = max(0.0, min(1.0, float(merged["music_volume"])))
     merged["note_speed"] = max(200, min(900, int(merged["note_speed"])))
     merged["judgement_line_y_ratio"] = max(0.55, min(0.92, float(merged["judgement_line_y_ratio"])))
-    merged["emg_threshold"] = max(0, min(1000, int(merged["emg_threshold"])))
+    merged["emg_threshold"] = normalize_emg_threshold(merged["emg_threshold"])
+    merged["emg_release_threshold"] = normalize_emg_release(merged["emg_release_threshold"])
     merged["show_game_hud"] = bool(merged["show_game_hud"])
     merged["show_judgement_text"] = bool(merged["show_judgement_text"])
     merged["show_camera_debug"] = bool(merged["show_camera_debug"])

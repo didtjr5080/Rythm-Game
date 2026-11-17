@@ -112,3 +112,27 @@ EXTRACTED: `docs/emg-device-setup.md`, `wiki/index.md`, `diagrams/input-flow.md`
 2026-11-17: 전시 작업 지시서 실행. 커서 배경 전파, 설정 저장 시 창 유지, 영상 표시 제어와 세대 폐기, 비동기 준비·저장, 원자 파일과 고유 ID, 계측, 회귀 검사 추가. 실제 전시 장치·DPI·장시간 검증은 docs/exhibition-stability.md 참조.
 
 2026-11-17 후속: 사용자 버튼 깨짐 스크린샷과 설정 상태 흔들림 반영. 커서를 별도 네이티브 투명 창으로 분리하고 설정 카메라 상태·영상 크기 고정 및 중간 갱신 제거. 실제 Windows 125%와 오프스크린 회귀 검사 통과.
+
+2026-11-17 — EXTRACTED: 사용자 승인 범위에서 EMG 활동 신호에 3표본 중앙값·EMA 필터를 적용하고 표시/판정 신호를 통일. 설정 화면에 안정·수축 자동 임계값 보정, 신호 끊김 취소와 실패 시 기존 값 유지 추가. 회귀 검사 17개 통과. docs/emg-auto-calibration.md 및 diagrams/emg-auto-calibration.md 작성, wiki/index.md 갱신. AMBIGUOUS: 실제 장치 출력 종류·GUI 실행·현장 반응은 미검증(PyQt6 미설치). 새 EXE 미빌드.
+
+2026-11-17 — EXTRACTED: Python 3.11 빌드 환경 생성 및 의존성 설치 후 build_windows.ps1 -Version 2026.11.17.3 실행. EMG 회귀 검사 17개와 오프스크린 설정 자동 보정/취소/저장 검증 통과. EXE 자체 검사 11개 항목 통과(ok=true), Windows ZIP·SHA256 생성. docs/emg-auto-calibration.md, docs/windows-release.md, wiki/index.md 갱신. 실제 EMG 장치 반응은 미검증이며 GitHub 업로드는 수행하지 않음.
+
+2026-11-17 — EXTRACTED: 사용자가 SZH-GJD001 사용을 재확인. 판매처 GJD001_code.ino의 500Hz·60–100Hz Butterworth 응답 기준으로 ESP8266 필터 수정, 40ms RMS와 펌웨어 v2 식별 추가. 앱에 v1 업그레이드 안내·v2 RAW 진단 차단과 보정 가드 추가. 회귀 검사 20개 및 Qt 보정 흐름 검사 통과. 사용자 승인 COM3 ESP8266EX 4MB 전체 백업 후 업로드·쓰기 해시·v2 실수신 검증 완료. 새 EXE는 기존 파일 잠금을 피해 dist_windows_szh_v4에 생성, 자체 검사 11개 항목 통과 및 2026.11.17.4 ZIP·SHA256 생성. docs/szh-gjd001-filter.md, 관련 문서·위키·다이어그램 갱신. TODO: 새 EXE에서 실제 안정/수축 자동 보정과 지연 확인.
+
+2026-11-17 — EXTRACTED: 사용자 보정 실패 스크린샷 검토 중 noise/0.55와 고정 60% 해제 규칙 때문에 안정 300/수축 400도 거부하는 계산 문제 확인. 안정 P95·수축 P10 사이에 ON 60%·OFF 20%를 분리 설정하고 OFF 저장·게임 전달·수동 변경 시 해제·상태 초기화 추가. 실패 시 측정값 표시. 회귀 검사 24개와 Windows 2026.11.17.5 EXE 자체 검사 11개 항목 통과. dist_windows_szh_v5에 생성, 펌웨어 변경 없음. docs/emg-calibration-hysteresis.md 신규 및 관련 문서·위키·다이어그램 갱신. AMBIGUOUS: 스크린샷에 두 측정 구간 통계가 없어 실제 실패 원인 확정은 불가. TODO: 새 EXE에서 현장 보정과 실패 통계 확인.
+
+2026-11-17 — EXTRACTED: 사용자 요청으로 별도 No-Bandpass EXE 비교 빌드 추가. ESP8266은 같은 500Hz 표본에서 기존 60–100Hz RMS와 대역통과 우회 DC+RMS를 계산하고 EMG1_BYPASS 확장 메시지로 추가 전송. 기존 EMG1/v2 식별 유지. 신호 선택·보정·설정 저장 및 marker 기반 비교 빌드 기본값 추가. 회귀 검사 27개·비교 EXE 자체 검사 11개 통과(default_emg_signal=unfiltered). 사용자 게임 종료 확인 후 COM3 4MB 전체 백업·업로드·쓰기 해시·양 경로 실수신 검증. 기존 EXE/ZIP 유지, 새 dist_windows_no_bandpass와 2026.11.17.6 ZIP 생성. docs/emg-no-bandpass-comparison.md 및 배포 문서·위키·Mermaid 갱신. TODO: 실제 안정/수축 구간의 두 모드 성능 비교.
+
+2026-11-17 — EXTRACTED: 사용자 요청에 따라 고정 차이 5 조건 제거. 초기 안정 및 반복 이완 구간 MAD/백분위 흔들림과 3회 최약 수축 P10을 비교해 잡음 대비 분리 판정. UI에 힘빼기 2초/수축 2초 3회(12초) 안내·전환 0.5초 제외·구간별 표본 수집 추가. 숫자 입력/설정 저장/실제 GameWidget까지 소수점 ON/OFF 보존(게임 생성 시 정수 변환 제거). 회귀 검사 31개 및 EXE 자체 검사 11개 통과. Windows 2026.11.17.7을 dist_windows_adaptive_calibration에 생성. 펌웨어 변경·업로드 없음. docs/emg-adaptive-calibration.md 신규 및 관련 문서·위키·다이어그램·배포 README 갱신. TODO: 실제 A/B 착용자의 반복 보정과 오입력/누락 검증.
+
+2026-11-17 — EXTRACTED: 사용자 요청으로 신호 품질 판단 기준 제거. 초기 안정/반복 이완 및 수축 구간 중앙값으로 ON/OFF를 직접 계산하며 작은 차이·겹침·동일값·감소형·ADC 범위 끝값도 적용. 최소 표본 수 기준 제거(구간 데이터 유무와 숫자 형식 검사는 유지). OFF>ON이면 감소형 활성/이완 판정, 설정 저장·게임 전달 및 DIR 표시 지원. 회귀 검사 33개·EXE 자체 검사 11개 통과, Windows 2026.11.17.8을 dist_windows_direct_calibration에 생성. 펌웨어 변경 없음. docs/emg-direct-calibration.md 신규 및 관련 문서·위키·Mermaid·배포 README 갱신. TODO: 실제 측정값 적용 후 동작 확인. 동일 신호를 서로 다른 동작으로 구분하는 정보가 생긴다고 주장하지 않음.
+
+2026-11-17 — EXTRACTED: 사용자 100% 초과 제보 확인. 기존 InputFusion의 활동값/ON 비율을 MVC로 표시하던 계산·표기 제거. 게임 HUD에 실제 활동값, ACTIVE/REST, ON/OFF 및 UP/DOWN 표시. 보정 계산과 판정 변경 없음. 실행 중 v8의 저장 ON 39.544/OFF 38.552 확인. 실제 설정 파일을 읽어 GameWidget 생성 전후 값·파일 바이트 유지 및 HUD 숫자 표시를 검사, 회귀 검사 34개 통과. v2026.11.17.9 EXE 자체 검사 11개 항목 통과, dist_windows_emg_display에 생성. docs/emg-game-display.md 신규 및 배포 문서·위키·Mermaid·README 갱신. TODO: 새 로컬 실행 폴더에 기존 설정 보존 후 실제 표시값 비교. 실제 신호의 전환 전후 변화까지 해결했다고 주장하지 않음.
+
+2026-11-17 후속 확인 — EXTRACTED: v9 ZIP·SHA256 검증 완료. ZIP 생성 후 기존 v8의 최신 설정을 새 로컬 실행 폴더에 바이트 단위 그대로 복사하고 로드 값 동일성 확인(복사 시점 ON 20.213/OFF 10.967/unfiltered). 기존 v8 설정 파일에는 쓰지 않았으며 사용자 설정은 배포 ZIP에서 제외. 남은 TODO는 실제 화면 간 활동값/ON/OFF 비교.
+
+2026-11-17 — EXTRACTED: 사용자 EMG 해결 확인 후 근전도 핵심 소스 7개 해시를 보존한 채 손 스크롤 변경. 두 손가락 90ms 유지 후 위아래 드래그, 정지 시 반복 이동 없음, 자세 해제 시 오클릭 없이 종료. 두 번 주먹 스크롤 토글 제거, 기존 주먹 클릭과 짧은 두 손가락 전환 유지. 메인·설정·결과·기록 안내/문서/Mermaid/EXE 자체 검사 갱신. 손 커서·결과 목록 회귀 및 EMG 34개 검사, 최신 EXE 자체 검사 11개 항목 통과. 2026.11.17.10을 dist_windows_current에 생성하고 SHA256 검증. 런타임 66개 사본 백업·해시 검증, 최신 폴더에 고유 51파일 이관. 구버전 EXE 폴더 7개·캐시 5개·ZIP/해시 14개·보고서 9개(백업 보존), 총35항목 정리. backups/version-cleanup-20261117에 manifest/정리 결과 보존, git 추적 제외. 최신 EMG 저장값 unfiltered/ON32.462/OFF19.606 유지. 펌웨어/원본 플래시 백업/소스/가상환경 유지. TODO: 실제 카메라에서 두 손가락 인식·드래그 감도 확인.
+
+2026-11-17 — EXTRACTED: 사용자 확인에 따라 손바닥 펴기/주먹이 아닌 실제 손목 젖힘/굽힘을 입력으로 사용하되, 추가 요청대로 손가락 정확히 두 개를 편 상태에서만 검사. 기존 MediaPipe 결과에 종횡비 보정 3D 관절 추가 전달, 손목→손바닥 기울기와 0.4초 안정 중립 비교. 15도 진입/8도 해제·약90ms 확인, 유지 시 위/아래 스크롤, 중립/자세 해제 시 정지. HOLD WRIST/WRIST READY/SCROLL UP/DOWN 안내 및 기존 주먹 클릭 유지. 손목 단위검사7개+EMG검사34개, 기존 손가락·5레인·손커서·결과 목록 검사, v2026.11.17.11 EXE 자체 검사11항목 통과. 핵심 EMG 소스7개 해시 동일. dist_windows_current에 새 버전 교체, 51개 런타임 파일 백업·SHA256 검증·이관(EMG unfiltered/ON32.462/OFF19.606 유지), v10 ZIP/검사/캐시 정리. backups/wrist-scroll-upgrade-20261117에 목록과 이전 자체 검사 보존. 문서·위키·Mermaid·배포 README 갱신. INFERRED: 전완 추적 없는 카메라 기준 손 기울기 추정이므로 손바닥을 카메라로 향하고 팔을 고정해야 함. TODO: 실제 카메라에서 방향·인식·감도 확인.
+
+2026-11-17 ? EXTRACTED: ??? ?? PPT ??? ????? 7? ?? ?? ??. ?? 180???? 120? ??, ??? ??/?? ??, ?? ?? ??? ??, ?? ???Mermaid ??. ?? ?? ?? ??. ZIP/XML/?? ?? ?? ??. TODO: ?? ??, ?? PC?? ?? ??????? 5? ???.

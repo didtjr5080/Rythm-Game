@@ -53,7 +53,7 @@ class ResultsBrowserScreen(QWidget):
         header.addWidget(refresh)
         header.addWidget(back)
         outer.addLayout(header)
-        hint=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL')
+        hint=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / 2 FINGERS + WRIST BACK/IN = SCROLL UP/DOWN / STRAIGHT = STOP')
         hint.setObjectName('subtitle'); hint.setWordWrap(True); outer.addWidget(hint)
 
         body = QHBoxLayout()

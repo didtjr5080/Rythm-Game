@@ -2,6 +2,8 @@
 
 ## 현재 확인된 장치
 
+EXTRACTED: 2026-11-17 후속 작업에서 현재 포트는 COM3으로 확인됐으며 ESP8266EX·4MB 전체 플래시 백업 후 SZH-GJD001용 펌웨어 v2 업로드와 실수신을 확인했습니다. 아래 COM5 기록은 이전 연결 당시의 포트입니다. [새 필터·검증 결과](szh-gjd001-filter.md)를 참고합니다.
+
 EXTRACTED: 이번 작업에서 COM5는 CP210x USB 시리얼 장치로 나타났고, Espressif esptool의 칩 식별 결과는 **ESP8266EX**였습니다. 사용자에게 표시된 보드 명칭만으로 ESP32라고 판단하지 않았습니다.
 
 EXTRACTED: 사용자가 이후 A0를 찾았으며 센서 모델은 `SZH-GJD001`, 전원은 3V3라고 알려주었습니다. COM5의 ESP8266에 제공 펌웨어를 업로드하고 플래시 해시를 검증했으며, 프로젝트 수신기로 실제 식별·데이터 프레임 수신을 확인했습니다. 덮어쓴 구간을 포함하는 기존 플래시 첫 512KiB는 로컬 `build/firmware/`에 백업하고 배포하지 않습니다.
@@ -27,6 +29,8 @@ EXTRACTED: 자동 모드는 Arduino/CH340/FTDI/CP210x 등 후보 USB 장치에�
 EXTRACTED: 수동 선택 장치의 USB VID/PID/시리얼 식별자를 저장하므로 같은 장치가 다른 COM 번호로 바뀌면 다시 찾습니다. 연결 끊김·수신 중단 시 기존 활성 상태를 지우고 재검색합니다. USB 시리얼 드라이버가 설치되지 않은 장치는 운영체제에서 먼저 인식되어야 합니다.
 
 ## 신호 선택
+
+EXTRACTED: 현재 SZH-GJD001의 후속 전용 처리는 [센서별 필터 설명](szh-gjd001-filter.md)을 참고합니다. 새 ESP8266 v2에서는 Filtered activity(60–100Hz 대역통과 후 RMS)를 사용하며, Direct A0는 진단 전용입니다. 아래 DC 제거·정류 방식은 기존 v1 및 Nano 구현 설명입니다.
 
 - **Filtered activity / raw EMG sensor**: 펌웨어에서 DC 기준 제거 → 절대값 → 평활화한 근활성 값을 사용합니다.
 - **Direct A0 / sensor ENV output**: 센서 모듈이 이미 처리한 ENV/SIG 출력을 제공한다면 A0 원시 ADC 값을 사용합니다.

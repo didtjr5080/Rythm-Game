@@ -1,5 +1,9 @@
 # EMG Motion Rhythm
 
+## 최신 로컬 Windows 버전
+
+EXTRACTED: 현재 로컬 실행 파일은 `dist_windows_current/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`, 배포 ZIP은 `release/EMG-Motion-Rhythm-windows-x64-2026.11.17.11.zip`입니다. [두 손가락 손목 기울기 스크롤](docs/hand-cursor.md)과 [버전 정리·백업 위치](docs/version-cleanup.md)를 참고하세요. 근전도 처리·보정은 유지했습니다.
+
 MediaPipe 손 위치 추적과 EMG 근전도 신호를 입력 장치로 활용한 PyQt6 기반 인터랙티브 리듬게임입니다.
 
 ## Game Mode

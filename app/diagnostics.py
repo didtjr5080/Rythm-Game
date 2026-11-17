@@ -83,10 +83,11 @@ def run_self_test(output_path):
         from PyQt6.QtWidgets import QWidget
         from PyQt6.QtCore import QPointF
         gestures = FoldGestures()
-        for moment,count in ((0.,5),(.12,5),(.16,0),(.26,0),(.30,5),(.42,5),(.46,0)):
-            assert gestures.feed(count,count==0,moment,None) is None
-        assert gestures.feed(0,True,.56,None)[0] == 'scroll'
+        assert gestures.feed(2,False,0.,None,-1) is None
+        assert gestures.feed(2,False,.12,None,-1)[0] == 'scroll'
         assert gestures.scrolling and gestures.advance(2.) is None
+        assert gestures.feed(5,False,2.1,None)[0] == 'scroll'
+        assert not gestures.scrolling
         cursor_host = QWidget()
         cursor_host.resize(320,240)
         cursor = HandCursorController(cursor_host)
@@ -97,7 +98,7 @@ def run_self_test(output_path):
         cursor.detach()
         cursor_host.close()
         report['hand_navigation'] = True
-        report['checks'].append('App-local cursor ring and fold/double-fold gesture state machine')
+        report['checks'].append('App-local cursor ring and two-finger wrist-tilt scroll state machine')
         from app.input.video_session import VideoSession
         session = VideoSession()
         first = session.acquire(dict(camera_enabled=False), enabled=False)
@@ -152,7 +153,8 @@ def run_self_test(output_path):
         assert engine.update(state,1000) == 'PERFECT'
         assert engine.update(state,1050) is None
         from app.settings import DEFAULT_SETTINGS
-        assert DEFAULT_SETTINGS['emg_signal'] == 'envelope'
+        expected_signal = 'unfiltered' if Path(__file__).with_name('no_bandpass.marker').is_file() else 'envelope'
+        assert DEFAULT_SETTINGS['emg_signal'] == expected_signal
         assert DEFAULT_SETTINGS['emg_threshold'] == config.EMG_THRESHOLD == 12
         report['default_emg_signal'] = DEFAULT_SETTINGS['emg_signal']
         report['default_emg_threshold'] = DEFAULT_SETTINGS['emg_threshold']
