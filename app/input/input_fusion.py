@@ -30,6 +30,7 @@ class InputFusion:
         emg_threshold: int = config.EMG_THRESHOLD,
         camera_flip: bool = config.CAMERA_FLIP,
         hand_tracker=None,
+        produce_rgb=True,
     ):
         self.tracker = hand_tracker if hand_tracker is not None else (MediaPipeHandTracker(flip=camera_flip) if use_camera else None)
         from app.settings import load_settings
@@ -40,6 +41,7 @@ class InputFusion:
             port=settings['emg_port'], baudrate=settings['emg_baudrate'], threshold=emg_threshold,
             device_id=settings['emg_device_id'], signal=settings['emg_signal'])
         self.last_camera_frame = None
+        self.produce_rgb = produce_rgb
         self.latest_frame_rgb = None
         self._rgb_source_frame = None
         self.finger_states = None
@@ -96,7 +98,7 @@ class InputFusion:
         self.raw_emg_value = float(getattr(self.emg_reader, "raw_value", emg_value))
         self.filtered_emg_value += .18 * (float(emg_value) - self.filtered_emg_value)
         self.emg_mvc_ratio = self.filtered_emg_value / max(1, self.emg_reader.threshold)
-        if self.last_camera_frame is None:
+        if not self.produce_rgb or self.last_camera_frame is None:
             self.latest_frame_rgb = None
             self._rgb_source_frame = None
         elif self.last_camera_frame is not self._rgb_source_frame:

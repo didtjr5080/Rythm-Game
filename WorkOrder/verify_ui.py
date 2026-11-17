@@ -56,7 +56,7 @@ import numpy as np
 frame=np.zeros((240,320,3),dtype=np.uint8)
 frame[:,:,1]=90
 state,_=game.input_fusion.read(frame)
-assert game.input_fusion.latest_frame_rgb.shape==(240,320,3)
+assert game.input_fusion.latest_frame_rgb is None  # Game owns its one display conversion.
 image=QImage(320,240,QImage.Format.Format_RGB888)
 image.fill(QColor('#10252c'))
 game.camera_pixmap=QPixmap.fromImage(image)

@@ -42,16 +42,19 @@ with tempfile.TemporaryDirectory() as folder:
 
 config.USE_CAMERA=False; config.USE_MOCK_EMG=True
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QRect
 from app.ui.theme import APP_STYLE,font_families
 from app.ui.main_window import MainWindow
 from app.ui.result_screen import ResultScreen
 app=QApplication([]); font_families(); app.setStyleSheet(APP_STYLE)
 window=MainWindow(); window.show()
 for resolution in ('1920x1080','1440x900'):
+    window._applied_display = None  # Exercise a real display change, not unchanged-save no-op.
     assert resolution in AVAILABLE_RESOLUTIONS
-    with patch('app.ui.main_window.load_settings',return_value=dict(load_settings(),resolution=resolution)):
-        window.apply_window_settings()
-    assert (window.width(),window.height())==tuple(map(int,resolution.split('x')))
+    with patch('app.ui.main_window.load_settings',return_value=dict(load_settings(),resolution=resolution,window_mode='windowed')):
+        with patch.object(type(window.screen()), 'availableGeometry', return_value=QRect(0,0,2560,1600)):
+            window.apply_window_settings()
+    assert (window.width(),window.height())==tuple(map(int,resolution.split('x'))), (resolution,window.size(),window._applied_display)
     for kind in ('lobby','calibration','game','settings','result'):
         if kind=='lobby': window.show_start_screen()
         elif kind=='calibration': window.show_calibration_screen()

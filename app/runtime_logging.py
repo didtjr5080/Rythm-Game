@@ -3,6 +3,7 @@ import faulthandler
 import sys
 import time
 import traceback
+import logging
 from pathlib import Path
 
 _stream = None
@@ -17,6 +18,10 @@ def install_runtime_logging():
         _stream = (directory/f'runtime-{time.strftime("%Y%m%d")}.log').open('a', encoding='utf-8', buffering=1)
         _stream.write('\nApplication starting: '+time.strftime('%Y-%m-%d %H:%M:%S')+'\n')
         faulthandler.enable(file=_stream, all_threads=True)
+        handler=logging.StreamHandler(_stream)
+        handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s'))
+        logging.getLogger().addHandler(handler)
+        logging.getLogger().setLevel(logging.INFO)
     except (OSError, RuntimeError):
         return
     original = sys.excepthook

@@ -19,20 +19,23 @@ class CursorRing(QWidget):
     def __init__(self, screen):
         super().__init__(screen)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        # Allow Qt to propagate the parent's backing store under translucent ink.
         self.point = QPointF()
         self.scrolling = False
         self.pending = False
         self.hide()
 
     def move_ring(self, point, scrolling, pending=False):
+        if self.isVisible() and self.point == point and self.scrolling == scrolling and self.pending == pending:
+            return
         old = QRectF(self.point.x()-105, self.point.y()-28, 210, 58)
         self.point, self.scrolling = QPointF(point), scrolling
         self.pending = pending
         new = QRectF(point.x()-105, point.y()-28, 210, 58)
         self.update(old.united(new).toAlignedRect())
-        self.show()
-        self.raise_()
+        if not self.isVisible():
+            self.show()
+            self.raise_()
 
     def paintEvent(self, event):
         p = QPainter(self)

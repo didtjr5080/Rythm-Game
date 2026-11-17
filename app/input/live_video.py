@@ -1,6 +1,7 @@
 """Camera and hand inference off the GUI thread, with one latest-result slot."""
 import threading
 import time
+from app.performance import timings
 
 from app.input.camera import CameraSource
 from app.input.mediapipe_tracker import MediaPipeHandTracker
@@ -19,6 +20,7 @@ class LiveVideoWorker:
     def __init__(self, settings, enabled=True, camera_factory=None, tracker_factory=None):
         self.settings = dict(settings)
         self.flip = bool(settings.get('camera_flip', True))
+        self._generation = 0
         self.capture = None  # Native objects are owned and closed by the worker.
         self._camera_factory = camera_factory or CameraSource
         self._tracker_factory = tracker_factory or MediaPipeHandTracker
@@ -77,19 +79,23 @@ class LiveVideoWorker:
                 self._status = camera.status
                 # Timestamp capture, not inference completion: slow results expire.
                 captured = time.monotonic()
-                tracker.set_flip(self.flip)
+                timings.add('camera_read_ms',(captured-started)*1000)
+                with self._lock:
+                    generation, flip = self._generation, self.flip
+                tracker.set_flip(flip)
                 small = frame
                 if frame is not None and max(frame.shape[:2]) > 640:
                     height, width = frame.shape[:2]
                     scale = 640 / max(height, width)
                     small = cv2.resize(frame, (round(width*scale), round(height*scale)), interpolation=cv2.INTER_AREA)
                 hand = tracker.track(small)
+                timings.add('hand_inference_ms',(time.monotonic()-captured)*1000)
                 self._diagnostic = tracker.diagnostic_summary
                 self._backend_ready = tracker.backend_is_mediapipe
                 self.last_error = tracker.last_error
                 # Never publish a frame captured with the previous flip setting.
                 with self._lock:
-                    self._snapshot = (captured, frame, hand, tracker.flip)
+                    self._snapshot = (captured, frame, hand, tracker.flip, generation)
                 interval = 1/30 if hand.get('hand_visible') else 1/15
                 self._stop.wait(max(0, interval-(time.monotonic()-started)))
         except Exception as exc:
@@ -115,14 +121,20 @@ class LiveVideoWorker:
         with self._lock:
             snapshot = self._snapshot
         if (self._stop.is_set() or snapshot is None
-                or time.monotonic()-snapshot[0] > self.MAX_AGE or snapshot[3] != self.flip):
+                or time.monotonic()-snapshot[0] > self.MAX_AGE or snapshot[3] != self.flip or snapshot[4] != self._generation):
             snapshot = None
         self._read_snapshot = snapshot
+        if snapshot is not None and getattr(self, '_displayed_stamp', None) != snapshot[0]:
+            timings.add('capture_to_first_gui_read_ms',(time.monotonic()-snapshot[0])*1000)
+            if hasattr(self, '_displayed_stamp'):
+                timings.add('camera_result_interval_ms',(snapshot[0]-self._displayed_stamp)*1000)
+            self._displayed_stamp=snapshot[0]
         return snapshot[1] if snapshot is not None else None
 
     def track(self, frame):
         snapshot = self._read_snapshot
-        if snapshot is None or frame is None or frame is not snapshot[1]:
+        if (snapshot is None or frame is None or frame is not snapshot[1]
+                or time.monotonic()-snapshot[0] > self.MAX_AGE or snapshot[4] != self._generation):
             return MediaPipeHandTracker._empty_result(frame)
         # Return a copy; GUI and inference never mutate the same dictionary.
         return dict(snapshot[2])
@@ -132,12 +144,16 @@ class LiveVideoWorker:
         with self._lock:
             snapshot = self._snapshot
         if (not self._backend_ready or self._stop.is_set() or snapshot is None
-                or time.monotonic()-snapshot[0] > self.MAX_AGE or snapshot[3] != self.flip):
+                or time.monotonic()-snapshot[0] > self.MAX_AGE or snapshot[3] != self.flip or snapshot[4] != self._generation):
             return None
         return snapshot[0], dict(snapshot[2])
 
     def set_flip(self, enabled):
-        self.flip = bool(enabled)
+        with self._lock:
+            if self.flip != bool(enabled):
+                self._generation += 1
+                self._snapshot = self._read_snapshot = None
+            self.flip = bool(enabled)
 
     def toggle_flip(self):
         self.set_flip(not self.flip)

@@ -89,6 +89,6 @@ def save_notes_json(notes: list[dict], output_dir: str | Path | None = None, son
     target_dir.mkdir(parents=True, exist_ok=True)
     path = notes_path_for_song(song_path) if song_path else target_dir / f"notes_{int(time.time())}.json"
     notes = simplify_for_emg(notes)
-    with open(path, "w", encoding="utf-8") as handle:
-        json.dump({"lane_count": config.LANE_COUNT, "notes": notes}, handle, indent=2)
+    from app.atomic_io import atomic_text
+    atomic_text(path,json.dumps({"lane_count": config.LANE_COUNT, "notes": notes}, indent=2))
     return path

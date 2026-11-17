@@ -79,6 +79,9 @@ try:
     assert worker.read() is None  # Old orientation must not be displayed.
     pause.set()
     assert blocked.wait(2)
+    worker.set_flip(True)
+    worker.set_flip(False)
+    assert worker.read() is None and worker.hand_sample() is None  # Same direction, new generation.
     time.sleep(worker.MAX_AGE+.03)
     assert worker.read() is None
     assert worker.hand_sample() is None

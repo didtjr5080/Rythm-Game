@@ -2,7 +2,10 @@ import json
 import time
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
+from uuid import uuid4
+from app.background import jobs
+from app.atomic_io import atomic_text
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 
@@ -19,23 +22,48 @@ class ResultScreen(AuroraScreen):
         self.session_paths = session_paths
         self._save_result()
         self._build()
+        self.save_timer=QTimer(self)
+        self.save_timer.timeout.connect(self._poll_save)
+        if hasattr(self, '_save_future'): self.save_timer.start(100)
 
     def _save_result(self):
         result_dir = Path(__file__).resolve().parents[1] / "data" / "results"
-        result_dir.mkdir(parents=True, exist_ok=True)
-        path = result_dir / f"result_{time.strftime('%Y%m%d_%H%M%S')}.json"
+        path = result_dir / f"result_{time.strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:12]}.json"
         payload = dict(self.metrics)
-        if self.session_paths:
-            payload["session_json"] = str(self.session_paths[0])
-            payload["session_csv"] = str(self.session_paths[1])
-        with open(path, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2)
         self.result_path = path
+        session_paths=self.session_paths
+        def write():
+            paths=session_paths.result() if hasattr(session_paths,'result') else session_paths
+            if paths:
+                payload['session_json'],payload['session_csv']=map(str,paths)
+            atomic_text(path,json.dumps(payload,indent=2))
+        self._save_future=jobs.submit(write)
+
+    def _poll_save(self):
+        if not self._save_future.done(): return
+        self.save_timer.stop()
+        try:
+            self._save_future.result()
+            self.save_status.setText(f'SAVED / {self.result_path.name}')
+        except Exception as exc:
+            self.save_status.setText(f'SAVE FAILED: {exc}')
+            self.retry_save.show()
+
+    def _retry_save(self):
+        self.retry_save.hide()
+        paths=self.session_paths
+        if hasattr(paths,'exception') and paths.done() and paths.exception() is not None:
+            logger=getattr(self.main_window,'_last_session_logger',None)
+            if logger is not None: self.session_paths=jobs.submit(logger.save)
+        self._save_result()
+        self.save_status.setText('SAVING...')
+        self.save_timer.start(100)
 
     def _build(self):
         outer=QVBoxLayout(self); outer.setContentsMargins(50,28,50,24)
         title=QLabel('POST-GAME REHABILITATION ANALYTICS'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(title)
-        saved=QLabel(f'SESSION: COMPLETED / {self.result_path.name}'); saved.setObjectName('subtitle'); outer.addWidget(saved)
+        self.save_status=QLabel(f'SAVING / {self.result_path.name}'); self.save_status.setObjectName('subtitle'); outer.addWidget(self.save_status)
+        self.retry_save=QPushButton('Retry Save'); self.retry_save.clicked.connect(self._retry_save); self.retry_save.hide(); outer.addWidget(self.retry_save)
         hint=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL')
         hint.setObjectName('subtitle'); hint.setWordWrap(True); outer.addWidget(hint)
         row=QHBoxLayout(); row.setSpacing(30)

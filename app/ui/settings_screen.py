@@ -380,6 +380,6 @@ class SettingsScreen(QWidget):
                 "emg_threshold": self.emg_threshold_slider.value(),
             }
         )
+        self.main_window.show_start_screen()
         if hasattr(self.main_window, "apply_window_settings"):
             self.main_window.apply_window_settings()
-        self.main_window.show_start_screen()

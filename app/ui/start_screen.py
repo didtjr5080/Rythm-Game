@@ -2,7 +2,8 @@ import shutil
 import time
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
+from app.background import jobs
 from PyQt6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -14,6 +15,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QTextEdit,
     QVBoxLayout,
+    QScrollArea,
     QWidget,
 )
 
@@ -36,6 +38,9 @@ class StartScreen(AuroraScreen):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
+        self._generation = None
+        self._generation_timer = QTimer(self)
+        self._generation_timer.timeout.connect(self._poll_generation)
         self.language = load_settings()["language"]
         self.song_list = QListWidget()
         self.song_list.setAlternatingRowColors(True)
@@ -64,10 +69,13 @@ class StartScreen(AuroraScreen):
         return path
 
     def _build(self):
-        outer=QVBoxLayout(self); outer.setContentsMargins(35,24,35,20); outer.setSpacing(14)
+        shell=QVBoxLayout(self); shell.setContentsMargins(0,0,0,0)
+        scroll=QScrollArea(); scroll.setWidgetResizable(True); shell.addWidget(scroll)
+        content=QWidget(); scroll.setWidget(content)
+        outer=QVBoxLayout(content); outer.setContentsMargins(35,24,35,20); outer.setSpacing(14)
         title=QLabel('EMG MOTION RHYTHM / SONIC LAB'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         outer.addWidget(title)
-        sub=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL'); sub.setObjectName('subtitle'); sub.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(sub)
+        sub=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / DOUBLE FIST = SCROLL MODE / ESC = CANCEL'); sub.setWordWrap(True); sub.setObjectName('subtitle'); sub.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(sub)
         row=QHBoxLayout(); row.setSpacing(24)
         left=GlassPanel('SONG & BEAT DSP ANALYSIS'); ll=QVBoxLayout(left); ll.setContentsMargins(16,42,16,16)
         self.song_instrument=Instrument('song'); self.song_instrument.compact=True
@@ -288,25 +296,40 @@ class StartScreen(AuroraScreen):
             self.selected_notes.setText("NOTES  SAMPLE")
 
     def generate_notes(self):
-        if not self.main_window.selected_song_path:
-            notes = generate_notes_from_analysis({})
-            path = save_notes_json(notes)
-            self.main_window.notes_path = str(path)
-            self._log(f"No song selected. Saved sample notes: {path}")
+        if self._generation is not None:
+            self._log('Note generation is already running.')
             return
-        analysis = analyze_audio_file(self.main_window.selected_song_path)
-        if not hasattr(self.main_window,'song_analyses'): self.main_window.song_analyses={}
-        self.main_window.song_analyses[self.main_window.selected_song_path]=analysis
-        self.song_instrument.analysis = analysis
-        analysis["file_id"] = Path(self.main_window.selected_song_path).stem
-        notes = generate_notes_from_analysis(analysis)
-        path = save_notes_json(notes, song_path=self.main_window.selected_song_path)
+        song = self.main_window.selected_song_path
+        def prepare():
+            analysis = analyze_audio_file(song) if song else {}
+            if song: analysis['file_id'] = Path(song).stem
+            notes = generate_notes_from_analysis(analysis)
+            path = save_notes_json(notes, song_path=song)
+            return analysis, path
+        self._generation = (song, jobs.submit(prepare))
+        self._generation_timer.start(50)
+        self._log('Analyzing audio / generating notes... You can continue using the menu.')
+
+    def _poll_generation(self):
+        song, future = self._generation
+        if not future.done(): return
+        self._generation = None
+        self._generation_timer.stop()
+        try:
+            analysis, path = future.result()
+        except Exception as exc:
+            self._log(f'Note generation failed: {exc}. Select the song and retry.')
+            return
+        # Completion belongs to this page and this exact selection only.
+        if self.main_window.centralWidget() is not self or self.main_window.selected_song_path != song:
+            return
+        if not hasattr(self.main_window, 'song_analyses'): self.main_window.song_analyses = {}
+        self.main_window.song_analyses[song] = analysis
         self.main_window.notes_path = str(path)
         self.refresh_saved_songs()
-        self.update_selected_panel(Path(self.main_window.selected_song_path))
-        self.song_instrument.analysis = analysis
+        self.update_selected_panel()
         self.song_instrument.update()
-        self._log(f"Generated and saved notes: {path}")
+        self._log(f'Generated and saved notes: {path}')
 
     def view_results(self):
         result_dir = Path(__file__).resolve().parents[1] / "data" / "results"

@@ -1,5 +1,6 @@
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtWidgets import QMainWindow, QMessageBox
+import logging
 
 from app import config
 from app.audio.note_generator_adapter import find_saved_notes_for_song
@@ -47,20 +48,24 @@ class MainWindow(QMainWindow):
         settings = load_settings()
         width, height = (int(part) for part in settings["resolution"].split("x", 1))
         mode = settings["window_mode"]
-        self.hide()
-        if mode == "borderless":
-            self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
-            self.resize(width, height)
-            self.show()
-        else:
-            self.setWindowFlags(Qt.WindowType.Window)
-            self.resize(width, height)
-            if mode == "fullscreen":
-                self.showFullScreen()
-            else:
-                self.show()
-        if was_active:
-            self.activateWindow()
+        display = (mode, settings['resolution'])
+        previous = getattr(self, '_applied_display', None)
+        if previous == display:
+            return
+        self._applied_display = display
+        available = self.screen().availableGeometry()
+        width = min(width, available.width())
+        height = min(height, max(1, available.height()-40))
+        flags = Qt.WindowType.Window
+        if mode == 'borderless': flags |= Qt.WindowType.FramelessWindowHint
+        if self.windowFlags() != flags:
+            self.setWindowFlags(flags)
+        self.showNormal()
+        self.resize(width, height)
+        if mode == 'fullscreen': self.showFullScreen()
+        else: self.show()
+        if was_active: self.activateWindow()
+        logging.getLogger(__name__).info('Display requested=%s actual=%sx%s available=%sx%s dpr=%s state=%s',display,self.width(),self.height(),available.width(),available.height(),self.devicePixelRatioF(),self.windowState())
 
     def _release_current_inputs(self):
         if self._navigation_video is not None:
@@ -109,6 +114,13 @@ class MainWindow(QMainWindow):
             saved_notes = find_saved_notes_for_song(self.selected_song_path)
             if saved_notes:
                 self.notes_path = str(saved_notes)
+        if self.notes_path:
+            from app.game.rhythm_game_engine import RhythmGameEngine
+            try: RhythmGameEngine.from_json_file(self.notes_path)
+            except (OSError, ValueError, TypeError, AttributeError, OverflowError) as exc:
+                self.show_start_screen()
+                QMessageBox.warning(self,'Chart unavailable',f'{exc}\nGenerate Notes again, then retry.')
+                return
         self.setCentralWidget(GameWidget(self, notes_path=self.notes_path, song_path=self.selected_song_path))
 
     def _defer_hand_navigation(self, callback):

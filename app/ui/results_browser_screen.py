@@ -104,7 +104,11 @@ class ResultsBrowserScreen(QWidget):
     def load_result(path: Path) -> dict:
         try:
             with open(path, "r", encoding="utf-8") as handle:
-                return json.load(handle)
+                data=json.load(handle)
+            if not isinstance(data,dict): return {}
+            for key in ('accuracy','score','avg_emg','avg_input_delay_ms','perfect_count','good_count','miss_count'):
+                if key in data: data[key]=float(data[key])
+            return data
         except Exception:
             return {}
 

@@ -458,6 +458,8 @@ class MediaPipeHandTracker:
         return count - 1 if count is not None and 1 <= count <= 5 else None
 
     def set_flip(self, enabled: bool):
+        if self.flip != enabled:
+            self._selected_hand = self._stable_fingers = self._pending_fingers = None
         self.flip = enabled
 
     def toggle_flip(self) -> bool:

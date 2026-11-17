@@ -108,3 +108,5 @@ EXTRACTED: `docs/emg-device-setup.md`, `wiki/index.md`, `diagrams/input-flow.md`
 2026-11-09 ? EXTRACTED: confirmed two Windows native access-violation reports for the hand-cursor release; stack memory contains camera-library addresses. Added shared camera leases, serialized native teardown/open, deferred hand page transitions, cancellation guards and local runtime fault logs. Added 20-round-trip regression. INFERRED: overlapping graph lifecycle implicated; physical camera was unavailable in this environment.
 
 2026-11-09 ? EXTRACTED: result and saved-result screens now acquire the shared navigation camera and attach the app-local hand cursor. Fold-click replay/return, record selection/scroll/refresh and camera reuse verified. Preserved disabled cursor in gameplay/calibration. Fixed empty-history placeholder lifetime during repeated refresh.
+
+2026-11-17: 전시 작업 지시서 실행. 커서 배경 전파, 설정 저장 시 창 유지, 영상 표시 제어와 세대 폐기, 비동기 준비·저장, 원자 파일과 고유 ID, 계측, 회귀 검사 추가. 실제 전시 장치·DPI·장시간 검증은 docs/exhibition-stability.md 참조.

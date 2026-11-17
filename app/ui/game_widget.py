@@ -1,5 +1,6 @@
 import time
 import math
+from app.performance import timings
 from collections import deque
 
 from PyQt6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
@@ -39,6 +40,7 @@ class GameWidget(QWidget):
             emg_threshold=int(self.settings["emg_threshold"]),
             camera_flip=bool(self.settings["camera_flip"]),
             hand_tracker=self.video_worker if config.USE_CAMERA and self.settings['camera_enabled'] else None,
+            produce_rgb=False,
         )
         self.session_logger = SessionLogger()
         self.audio_player = AudioPlayer(self.song_path, volume=self.settings["music_volume"])
@@ -83,6 +85,8 @@ class GameWidget(QWidget):
         return self.camera_source.read()
 
     def _update_camera_pixmap(self, frame):
+        if not self.ar_camera and not (self.settings.get('show_game_hud', True) and self.settings.get('show_camera_debug', True)):
+            frame = None
         frame_key = (id(frame), self.camera_flip)
         if frame is not None and getattr(self, '_camera_frame_key', None) == frame_key:
             return
@@ -97,7 +101,7 @@ class GameWidget(QWidget):
                 frame = self.cv2.flip(frame, 1)
             rgb = self.cv2.cvtColor(frame, self.cv2.COLOR_BGR2RGB)
             height, width, channels = rgb.shape
-            image = QImage(rgb.data, width, height, channels * width, QImage.Format.Format_RGB888)
+            image = QImage(rgb.data, width, height, rgb.strides[0], QImage.Format.Format_RGB888)
             self.camera_pixmap = QPixmap.fromImage(image.copy())
             self.camera_debug_pixmap = None
         except Exception:
@@ -115,6 +119,9 @@ class GameWidget(QWidget):
         return self.engine.is_finished(current_time_ms)
 
     def game_loop(self):
+        tick_started = time.perf_counter()
+        if hasattr(self, '_previous_tick'): timings.add('gui_tick_interval_ms', (tick_started-self._previous_tick)*1000)
+        self._previous_tick = tick_started
         current_time_ms = self._playback_time_ms()
         raw_frame = self._read_camera_frame()
         input_state, _tracked_frame = self.input_fusion.read(raw_frame)
@@ -125,6 +132,7 @@ class GameWidget(QWidget):
             input_state.hand_y = 0.5
         self.current_input = input_state
         self._update_camera_pixmap(raw_frame)
+        timings.add('gui_input_and_pixmap_ms', (time.perf_counter()-tick_started)*1000)
 
         self.raw_history.append(self.input_fusion.raw_emg_value)
         self.filtered_history.append(self.input_fusion.filtered_emg_value)
@@ -146,6 +154,7 @@ class GameWidget(QWidget):
             self.result_flash = result
             self.result_flash_time_ms = current_time_ms
         self.session_logger.log(current_time_ms, input_state, note_index, result)
+        timings.add('gui_tick_work_ms', (time.perf_counter()-tick_started)*1000)
 
         if self._should_finish(current_time_ms):
             self.finish_game()
@@ -163,9 +172,12 @@ class GameWidget(QWidget):
         self.audio_player.stop()
         self.camera_source.release()
         self.input_fusion.close()
-        session_paths = self.session_logger.save() if config.SAVE_SESSION_LOG else None
+        from app.background import jobs
+        self.main_window._last_session_logger = self.session_logger
+        session_paths = jobs.submit(self.session_logger.save) if config.SAVE_SESSION_LOG else None
         metrics = calculate_game_metrics(self.engine.score_state, self.session_logger.rows, self.input_delays_ms)
         self.main_window.show_result_screen(metrics, session_paths=session_paths)
+        timings.flush()
 
     def abort_game(self):
         if self.finished:
@@ -249,6 +261,9 @@ class GameWidget(QWidget):
             print(f"Camera flip set to {self.camera_flip}")
 
     def paintEvent(self, event):
+        paint_started = time.perf_counter()
+        if hasattr(self, '_previous_paint'): timings.add('paint_interval_ms', (paint_started-self._previous_paint)*1000)
+        self._previous_paint = paint_started
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         scale=min(self.width()/1280, self.height()/720)
@@ -314,6 +329,7 @@ class GameWidget(QWidget):
         if tracker and not tracker.backend_is_mediapipe:
             text(p,QRectF(340,35,600,48),'MEDIAPIPE INACTIVE / CHECK CAMERA TEST IN SETTINGS',13,'#FB923C')
         text(p,QRectF(280,687,720,24),'1-5: LANE / SPACE: DEMO ONLY  /  F: FLIP  /  V: AR CAMERA',10,'#94A3B8')
+        timings.add('paint_work_ms', (time.perf_counter()-paint_started)*1000)
 
     def _draw_lab_hud(self,p):
         draw_frosted_glass_card(p,QRectF(42,100,282,190),'EMG DSP FILTER & THRESHOLD')
@@ -322,6 +338,10 @@ class GameWidget(QWidget):
         ratio=self.input_fusion.emg_mvc_ratio
         draw_circular_gauge(p,QRectF(88,357,157,157),ratio,f'{ratio*100:.0f}%','MVC ACTIVE')
         text(p,QRectF(50,516,234,18),getattr(self.input_fusion.emg_reader,'status','MOCK EMG'),8,'#94A3B8')
+        if self.settings.get('show_camera_debug', True): self._draw_camera_hud(p)
+        self._draw_score_hud(p)
+
+    def _draw_camera_hud(self, p):
         draw_frosted_glass_card(p,QRectF(940,70,300,245),'LIVE WEBCAM FEED & HAND TRACKING')
         view=QRectF(952,110,276,185)
         p.save(); clip=QPainterPath(); clip.addRoundedRect(view,8,8); p.setClipPath(clip)
@@ -333,7 +353,7 @@ class GameWidget(QWidget):
             for i in range(12):
                 p.setPen(QColor(100,180,170,22)); x=view.x()+i*25; p.drawLine(QPointF(x,view.top()),QPointF(x,view.bottom()))
         landmarks=self.input_fusion.hand_landmarks_norm
-        if landmarks or self.camera_pixmap is None:
+        if landmarks and self.camera_pixmap is not None:
             draw_hand_skeleton_overlay(p,image_bounds if landmarks and self.camera_pixmap is not None else view.adjusted(20,5,-20,-20),landmarks,time.monotonic(),finger_states=self.input_fusion.finger_states)
         lane=self.current_input.lane
         for i in range(config.LANE_COUNT):
@@ -342,7 +362,9 @@ class GameWidget(QWidget):
             text(p,QRectF(cell.x(),cell.bottom()-22,cell.width(),20),LANE_NAMES[i],8)
         p.restore()
         fallback=not self.input_fusion.hand_landmarks_norm
-        text(p,QRectF(950,298,280,16),('LIVE CAMERA / NO LANDMARKS' if self.camera_pixmap is not None else 'CAMERA UNAVAILABLE / SIMULATION') if fallback else 'LIVE 21-POINT TRACKING',8,'#94A3B8')
+        text(p,QRectF(950,298,280,16),('LIVE CAMERA / NO LANDMARKS' if self.camera_pixmap is not None else self.camera_source.status) if fallback else 'LIVE 21-POINT TRACKING',8,'#94A3B8')
+
+    def _draw_score_hud(self, p):
         draw_frosted_glass_card(p,QRectF(1010,337,230,100),'LIVE CALIBRATION')
         count=self.current_input.finger_count
         text(p,QRectF(1024,376,200,22),f"FINGERS: {count if count is not None else '--'} / {self.current_input.hand_label or '--'}",11)

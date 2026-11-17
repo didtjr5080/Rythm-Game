@@ -1,3 +1,7 @@
+# v2026.11.17.1 전시 안정화
+
+커서 배경 복원, 설정 저장 후 창 크기 유지, 카메라 HUD 설정 연결, 비동기 채보 생성과 결과 저장, 저장 재시도, 원자 저장과 고유 ID, 성능 기록을 추가했습니다. 실제 전시 장비·DPI·장시간 검증은 별도로 필요합니다.
+
 ## Hand control on Results screens
 
 - Post-game Results supports the same circular hand pointer, fold click and double-fold scroll mode.
