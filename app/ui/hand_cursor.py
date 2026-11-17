@@ -17,20 +17,27 @@ def alive(widget):
 
 class CursorRing(QWidget):
     def __init__(self, screen):
-        super().__init__(screen)
+        # A native translucent surface is composited by Windows, separately from
+        # stylesheet buttons. A translucent sibling can reuse partial button
+        # backing-store pixels during hover and leave rectangular fragments.
+        super().__init__(screen, Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint
+                         | Qt.WindowType.WindowTransparentForInput | Qt.WindowType.WindowDoesNotAcceptFocus)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        # Allow Qt to propagate the parent's backing store under translucent ink.
         self.point = QPointF()
         self.scrolling = False
         self.pending = False
         self.hide()
 
     def move_ring(self, point, scrolling, pending=False):
-        if self.isVisible() and self.point == point and self.scrolling == scrolling and self.pending == pending:
+        origin = self.parentWidget().mapToGlobal(QPoint(0, 0))
+        if self.isVisible() and self.point == point and self.scrolling == scrolling and self.pending == pending and self.pos() == origin:
             return
         old = QRectF(self.point.x()-105, self.point.y()-28, 210, 58)
         self.point, self.scrolling = QPointF(point), scrolling
         self.pending = pending
+        self.move(origin)
         new = QRectF(point.x()-105, point.y()-28, 210, 58)
         self.update(old.united(new).toAlignedRect())
         if not self.isVisible():
@@ -39,6 +46,9 @@ class CursorRing(QWidget):
 
     def paintEvent(self, event):
         p = QPainter(self)
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+        p.fillRect(event.rect(), Qt.GlobalColor.transparent)
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setFont(lab_font(9, True))
         color = QColor('#C4B5FD' if self.scrolling else '#FBBF24' if self.pending else '#6EE7B7')

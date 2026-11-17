@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QVBoxLayout,
     QWidget,
+    QSizePolicy,
 )
 
 from app.i18n import tr
@@ -50,10 +51,13 @@ class SettingsScreen(QWidget):
         self.preview_timer.timeout.connect(self.refresh_camera_preview)
         self.camera_preview = QLabel('Select a camera and click Connect / Test Camera')
         self.camera_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.camera_preview.setMinimumHeight(150)
+        self.camera_preview.setFixedHeight(200)
+        self.camera_preview.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.camera_preview.setWordWrap(True)
         self.camera_status = QLabel()
-        self.camera_status.setWordWrap(True)
+        self.camera_status.setWordWrap(False)
+        self.camera_status.setFixedHeight(self.camera_status.fontMetrics().lineSpacing()*3+12)
+        self.camera_status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.language_combo = QComboBox()
         self.window_mode_combo = QComboBox()
         self.resolution_combo = QComboBox()
@@ -294,8 +298,8 @@ class SettingsScreen(QWidget):
         if self.preview_source is None: return
         self.preview_tracker.set_flip(self.camera_flip_checkbox.isChecked())
         frame=self.preview_source.read()
-        self.camera_status.setText(self.preview_source.status+' / '+self.preview_source.error if self.preview_source.error else self.preview_source.status)
         if frame is None:
+            self._set_camera_status(self.preview_source.status+'\n'+(self.preview_source.error or 'Waiting for a fresh camera frame')+'\n1-5 fingers: lanes 1-5 / Fist: none')
             self.camera_preview.setText(self.preview_source.status)
             return
         if frame is self._preview_frame_reference: return
@@ -314,9 +318,15 @@ class SettingsScreen(QWidget):
                 draw_hand_skeleton_overlay(painter,QRectF(pixmap.rect()),tracked['landmarks'],finger_states=tracked.get('finger_states'))
             painter.end()
             count=tracked.get('finger_count')
-            self.camera_status.setText(self.preview_source.status+'\n'+self.preview_tracker.diagnostic_summary+'\n'+finger_summary(tracked.get('finger_states'))+f" / FINGERS: {count if count is not None else '--'} / 1-5 FINGERS = LANES 1-5 / FIST = NONE")
-            self.camera_status.setStyleSheet('color: #6EE7B7;' if self.preview_tracker.backend_is_mediapipe else 'color: #FB923C;')
+            backend='MediaPipe ready' if self.preview_tracker.backend_is_mediapipe else 'MediaPipe unavailable / check camera'
+            self._set_camera_status(self.preview_source.status+'\n'+backend+f"\nFingers: {count if count is not None else '--'} / 1-5: lanes / Fist: none")
+            self.camera_status.setToolTip(self.preview_tracker.diagnostic_summary)
+            style='color: #6EE7B7;' if self.preview_tracker.backend_is_mediapipe else 'color: #FB923C;'
+            if self.camera_status.styleSheet()!=style: self.camera_status.setStyleSheet(style)
         self.camera_preview.setPixmap(pixmap.scaled(480,200,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation))
+
+    def _set_camera_status(self, text):
+        if self.camera_status.text()!=text: self.camera_status.setText(text)
 
     def go_back(self):
         defer = getattr(self.main_window, '_defer_hand_navigation', None)

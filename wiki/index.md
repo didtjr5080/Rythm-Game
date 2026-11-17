@@ -1,4 +1,4 @@
-- [전시 안정화 구현과 현장 TODO](../docs/exhibition-stability.md) — EXTRACTED: 픽셀·저장 경로 검사, 비동기 작업, 계측.
+- [전시 안정화 구현과 현장 TODO](../docs/exhibition-stability.md) — v2026.11.17.2: 버튼 합성 분리와 설정 상태 영역 고정, Windows 125% 검사.
 Rythm-Game 위키
 
 - v2026.11.09.4: [손 커서](../docs/hand-cursor.md)를 결과 화면·저장된 결과 목록에도 확장했습니다. 게임 중에는 비활성화하며 기존 카메라 세션을 재사용합니다.

@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-    Hand[카메라 워커 / 반전 세대] --> Menu[메뉴와 커서 / Qt 배경 복원]
+    Hand[카메라 워커 / 반전 세대] --> Menu[메뉴 / 커서는 별도 입력 통과 투명 창]
     Menu --> Save[설정 저장]
     Save --> Start[시작 화면 교체]
     Start --> Display{표시 설정 변경?}
