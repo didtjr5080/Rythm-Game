@@ -136,3 +136,8 @@ EXTRACTED: `docs/emg-device-setup.md`, `wiki/index.md`, `diagrams/input-flow.md`
 2026-11-17 — EXTRACTED: 사용자 확인에 따라 손바닥 펴기/주먹이 아닌 실제 손목 젖힘/굽힘을 입력으로 사용하되, 추가 요청대로 손가락 정확히 두 개를 편 상태에서만 검사. 기존 MediaPipe 결과에 종횡비 보정 3D 관절 추가 전달, 손목→손바닥 기울기와 0.4초 안정 중립 비교. 15도 진입/8도 해제·약90ms 확인, 유지 시 위/아래 스크롤, 중립/자세 해제 시 정지. HOLD WRIST/WRIST READY/SCROLL UP/DOWN 안내 및 기존 주먹 클릭 유지. 손목 단위검사7개+EMG검사34개, 기존 손가락·5레인·손커서·결과 목록 검사, v2026.11.17.11 EXE 자체 검사11항목 통과. 핵심 EMG 소스7개 해시 동일. dist_windows_current에 새 버전 교체, 51개 런타임 파일 백업·SHA256 검증·이관(EMG unfiltered/ON32.462/OFF19.606 유지), v10 ZIP/검사/캐시 정리. backups/wrist-scroll-upgrade-20261117에 목록과 이전 자체 검사 보존. 문서·위키·Mermaid·배포 README 갱신. INFERRED: 전완 추적 없는 카메라 기준 손 기울기 추정이므로 손바닥을 카메라로 향하고 팔을 고정해야 함. TODO: 실제 카메라에서 방향·인식·감도 확인.
 
 2026-11-17 ? EXTRACTED: ??? ?? PPT ??? ????? 7? ?? ?? ??. ?? 180???? 120? ??, ??? ??/?? ??, ?? ?? ??? ??, ?? ???Mermaid ??. ?? ?? ?? ??. ZIP/XML/?? ?? ?? ??. TODO: ?? ??, ?? PC?? ?? ??????? 5? ???.
+
+
+## 2026-11-18 Next tasks and Git documentation update
+
+EXTRACTED: Added docs/NEXT_TASKS.md with priorities and acceptance criteria for audio timelines, the full-song test fixture, real armband persistence, menu camera checks, and a verified EXE build. Included docs/music-session-review.md and diagrams/music-session-review.md as observations of the local working tree, not a release guarantee. This commit excludes game source and other pending edits. TODO: implementation and build require a scope permitting code changes under AGENTS.md. View diagrams with Mermaid Markdown preview; run Graphify manually with graphify .

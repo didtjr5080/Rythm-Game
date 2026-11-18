@@ -111,3 +111,6 @@ Windows 실행 파일 배포
 - [EXTRACTED: 두 손가락 손목 기울기 스크롤](../docs/hand-cursor.md) — 중립 유지 → 손목 뒤로 젖힘: 위 / 안쪽 굽힘: 아래 / 중립: 정지. v2026.11.17.11, 현재 실행 경로 유지·런타임 51개 백업/이관. [Mermaid](../diagrams/hand-cursor.md).
 
 - [EXTRACTED: ?? ??? ?? 5? ?? PPT ? 3? ?? + 2? ?? ??](../docs/presentation/README.md) ? [?? ?? ??](../diagrams/presentation-flow.md)
+
+
+- [Next tasks and acceptance criteria](../docs/NEXT_TASKS.md) | [Local verification](../docs/music-session-review.md) | [Mermaid](../diagrams/music-session-review.md)
