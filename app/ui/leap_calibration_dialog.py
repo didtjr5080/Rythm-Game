@@ -12,16 +12,18 @@ from app.input.pinch_classifier import features
 
 
 class LeapCalibrationDialog(QDialog):
-    def __init__(self, parent=None, tracker_factory=LeapPinchTracker):
+    def __init__(self, parent=None, tracker_factory=LeapPinchTracker, player_profile=None):
         super().__init__(parent)
         self.setWindowTitle('Leap Motion 핀치 보정')
         self.resize(620, 420)
         self.samples = {}
         self.phase = None
         self.tracker = None
+        self.player_profile = player_profile
+        self.calibrated_thresholds = None
         layout = QVBoxLayout(self)
         info = QLabel('오른손을 사용하세요. 개인 이름을 입력한 뒤 열린 손과 네 핀치를 각각 측정합니다.\n'
-                      'Leap Motion만 사용합니다. 매 게임 시작 전에 보정합니다.\n'
+                      'Leap Motion만 사용합니다. 저장한 보정값은 다음 게임부터 재사용합니다.\n'
                       '측정 버튼 → 1초 준비 → 3초 유지 → 다음 동작. 다섯 동작 측정 후 게임을 시작하세요.')
         info.setWordWrap(True)
         layout.addWidget(info)
@@ -55,7 +57,8 @@ class LeapCalibrationDialog(QDialog):
         close.clicked.connect(self.reject)
         layout.addWidget(close)
         try:
-            data = load_profiles()
+            data = (load_profiles() if player_profile is None else
+                    {'active': player_profile['name'], 'profiles': {player_profile['name']: player_profile.get('pinch')}})
         except (OSError, ValueError) as exc:
             self.status.setText(str(exc))
             for button in (self.capture, self.save):
@@ -63,6 +66,8 @@ class LeapCalibrationDialog(QDialog):
             return
         self.profile.addItems(data['profiles'])
         self.profile.setCurrentText(data['active'] or 'Player')
+        if player_profile is not None:
+            self.profile.setEditable(False)
         self.active.setText('현재 보정: ' + (data['active'] or '기본값'))
         self.profile.editTextChanged.connect(self.clear_samples)
         self.tracker = tracker_factory()
@@ -128,7 +133,9 @@ class LeapCalibrationDialog(QDialog):
     def save_capture(self):
         try:
             thresholds = calculate_thresholds(self.samples)
-            save_profile(self.profile.currentText(), thresholds)
+            if self.player_profile is None:
+                save_profile(self.profile.currentText(), thresholds)
+            self.calibrated_thresholds = thresholds
         except (OSError, ValueError) as exc:
             self.status.setText(str(exc))
             return

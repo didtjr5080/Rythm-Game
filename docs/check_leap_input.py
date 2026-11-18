@@ -112,7 +112,7 @@ class LeapInputChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'chart.json'
             path.write_text(json.dumps({'lane_count': 5, 'notes': [
-                {'lane': i, 'hit_time_ms': 1000 + i * 1000} for i in range(5)]}))
+                {'lane': i, 'hit_time_ms': 1000 + i * 2000} for i in range(5)]}))
             engine = RhythmGameEngine.from_json_file(path)
         self.assertEqual([n.lane for n in engine.notes], [0, 1, 0, 3, 0])
         self.assertTrue(all(0 <= n.lane < 4 for n in engine.generate_sample_notes()))

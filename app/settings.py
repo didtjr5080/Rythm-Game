@@ -15,7 +15,7 @@ DEFAULT_SETTINGS = {
     "camera_index": 0,
     "camera_resolution": "1280x720",
     "music_volume": 0.85,
-    "note_speed": 360,
+    "note_speed": 200,
     "judgement_line_y_ratio": 0.82,
     "emg_threshold": 12,
     "emg_release_threshold": None,
@@ -113,7 +113,7 @@ def load_settings() -> dict:
     settings["window_mode"] = settings["window_mode"] if settings["window_mode"] in {"windowed", "borderless", "fullscreen"} else "windowed"
     settings["resolution"] = settings["resolution"] if settings["resolution"] in AVAILABLE_RESOLUTIONS else "1280x720"
     settings["music_volume"] = max(0.0, min(1.0, float(settings["music_volume"])))
-    settings["note_speed"] = max(200, min(900, int(settings["note_speed"])))
+    settings["note_speed"] = max(50, min(200, int(settings["note_speed"])))
     settings["judgement_line_y_ratio"] = max(0.55, min(0.92, float(settings["judgement_line_y_ratio"])))
     settings["emg_threshold"] = normalize_emg_threshold(settings["emg_threshold"])
     settings["emg_release_threshold"] = normalize_emg_release(settings["emg_release_threshold"])
@@ -145,7 +145,7 @@ def save_settings(settings: dict) -> dict:
     merged["window_mode"] = merged["window_mode"] if merged["window_mode"] in {"windowed", "borderless", "fullscreen"} else "windowed"
     merged["resolution"] = merged["resolution"] if merged["resolution"] in AVAILABLE_RESOLUTIONS else "1280x720"
     merged["music_volume"] = max(0.0, min(1.0, float(merged["music_volume"])))
-    merged["note_speed"] = max(200, min(900, int(merged["note_speed"])))
+    merged["note_speed"] = max(50, min(200, int(merged["note_speed"])))
     merged["judgement_line_y_ratio"] = max(0.55, min(0.92, float(merged["judgement_line_y_ratio"])))
     merged["emg_threshold"] = normalize_emg_threshold(merged["emg_threshold"])
     merged["emg_release_threshold"] = normalize_emg_release(merged["emg_release_threshold"])

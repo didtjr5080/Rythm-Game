@@ -37,8 +37,11 @@ class InputFusion:
         use_emg=True,
         use_leap=True,
         emg_session=None,
+        leap_thresholds=None,
     ):
-        self.tracker = hand_tracker if hand_tracker is not None else LeapPinchTracker() if use_leap else None
+        self.tracker = (hand_tracker if hand_tracker is not None else
+                        (LeapPinchTracker(thresholds=leap_thresholds) if leap_thresholds is not None else LeapPinchTracker())
+                        if use_leap else None)
         from app.settings import load_settings
         settings = load_settings()
         if use_mock_emg is None:
@@ -82,17 +85,21 @@ class InputFusion:
                 hand = self.tracker.track(frame)
             except Exception as exc:
                 print(f"Input hand tracking failed: {exc}")
+        emg_read_failed = False
         try:
             emg_value, emg_activated = self.emg_reader.read() if self.emg_reader is not None else (0.0, False)
         except Exception as exc:
             print(f"EMG input failed: {exc}")
             emg_value, emg_activated = 0.0, False
+            emg_read_failed = True
 
         fresh = self.emg_reader is not None
         if hasattr(self.emg_reader, 'signal_fresh'):
             fresh = self.emg_reader.signal_fresh
         elif hasattr(self.emg_reader, '_last_sample'):
             fresh = self.emg_reader.serial is not None and time.monotonic()-self.emg_reader._last_sample < .15
+        if emg_read_failed:
+            fresh = False
         state = GameInputState(
             lane=hand.get("lane"),
             emg_value=float(emg_value),

@@ -222,7 +222,45 @@ EXTRACTED: 기존 테스트 75개 통과. WorkOrder/verify_full_song.py는 테�
 
 ## 2026-11-18 Next tasks and Git documentation update
 
+EXTRACTED: 선택이미지2026.11.18.8 EXE자체23·ZIP1323파일 CRC/전체일치/첨부PNG원본일치 통과. SHA256 55803eca6797b525e87b0c2004a58045b8dbaf3e11278b78223dc33a30e35e41. 직전7 사용자데이터71파일 보존복사, 최신8/직전7만 유지. 구버전6·캐시2폴더/ZIP해시2파일 삭제전 데이터66항목 SHA백업. 정리백업 backups/build-prune-20261118-v8, 보고서prefix image-2026.11.18.8.
+
+2026-11-18 상위카드 이미지 — EXTRACTED: 사용자 첨부와 일치하는 다운로드 원본을 확인해 app/assets/game_modes/pinch_extension.png로 그대로 복사. 상위 카드만 해당 파일로 연결, 기본두이미지·프로필·입력·해금 유지. PNG1447x1087/SHA256 f552c351e31421d0e201fa69fdf5256a5fe18ddcbeeb4095e270d6ab1252848e. 실제스타일 카드미리보기·120회귀 통과. 2026.11.18.8 빌드, 보관정책은8/직전7. 도식변경없음, 기존Mermaid미리보기·graphify . 수동실행 유지.
+
+2026-11-18 프로필 — EXTRACTED: 사용자 요청으로 사람별UUID/이름/핀치값/EMG최저값/정상완주이력 저장·선택·삭제. 저장값 재사용, 기존 이름별 핀치만 가져오기, 전역값 혼용 차단, 새 보정/보정 삭제 시 해당 완료 초기화. 같은 프로필의 기본 두 모드 정상완주만 상위 해금, 화면/진입/생성 시 검사. 수동/오류/MISS 종료 미인정, 게임 시작ID 고정·삭제 후 결과로 부활 방지. 소스120·자체23항목 통과. 2026.11.18.7 EXE/ZIP 검증, 직전6 데이터64파일 보존복사. 요청대로 최신7/직전6만 유지, 구버전21폴더/ZIP해시36파일 삭제전 데이터490항목 SHA백업. firmware/flash/SDK브리지/데이터백업 유지. 정리보고서 backups/build-prune-20261118-v7, 구현문서/도식/위키/README 갱신. 실제프로필·두센서실기TODO. 도식은Mermaid, Graphify는graphify .로수동실행(미실행).
+
+EXTRACTED: 상위핀치2026.11.18.6 EXE자체21항목·세모드 확인, ZIP CRC/1322파일전체일치/개인데이터제외 통과. 직전 실행폴더 최신사용자데이터60파일 원본보존·해시복사. 보고서prefix advanced-2026.11.18.6, SHA256 ba6087007cf81b43b0f7b3ff555712837982b17dd7d028d795eb02b4ce6dd8d6. 실제동시착용실기TODO 유지.
+
+2026-11-18 상위 모드 — EXTRACTED: 사용자 '핀치+신전 동시 확인' 선택에 따라 pinch_extension 제3모드 구현. Leap4레인+신선한EMG최저값이상 동시조건, Leap보정→3.0초EMG기록→음악, 기존캐시재사용·레인보존·연속MISS10·결과모드구분·동일모드재시도. 기본두모드 유지. EMG읽기예외는fresh=False로 처리. 선택카드/게임HUD/결과·기록목록/테스트/문서/도식 반영. 기존95+새9=104검사·소스자체21항목 통과, 2026.11.18.6 빌드진행. 실제동시착용실기TODO. 도식은Mermaid미리보기, Graphify는graphify .로수동실행(미실행).
+
+EXTRACTED: 최저값기준2026.11.18.5 최종EXE 자체검사19항목 통과. 메인/설정의 과거+0.01안내까지 정정해 최종재빌드. ZIP CRC/1322파일전체일치/개인데이터제외 통과, 이전 폴더 데이터54파일 원본보존·해시복사. 최종보고서 minimum-2026.11.18.5-final-exe-self-test.json, 소스/EXE manifest·복사·ZIP보고서 같은 prefix. SHA256 ffabc35ad249bcc97c0e2fa6862364f028b04c478e985b7f74197a0968fd69df.
+
+2026-11-18 근전도 기준 변경 — EXTRACTED: 사용자 요청으로 시작 전3.0초 기록 최저값을 기준으로 신전 판정(value>=minimum). 평균/+0.01/비교반올림 제거, 측정목록·최저값·method/duration/delta 결과 기록, HUD 신전 표기. 3초 뒤 표본묶음 제외·빈표본대기·신호단절재측정 유지. 연속MISS10·긴노트전용 유지. 95개 검사·소스자체19항목 통과, 2026.11.18.5 빌드 진행. 현재 문서/도식/위키/README 갱신, 과거 평균기록 분리. 도식은 Mermaid 미리보기, Graphify는 graphify .로 수동 실행(미실행).
+
+EXTRACTED: 연속MISS 정정2026.11.18.4 EXE 자체검사19항목 통과. 소스92개 검사, ZIP CRC/전체파일동일/개인데이터제외 통과. 이전 실행폴더의 최신 사용자 데이터54파일 원본보존·해시복사 완료. SHA256 5f3a8bb197819fe12094df72f330f515eb1cb9c371ac80a0e1345489a69feeb4. 최신 경로 dist_windows_rules_20261118_4/EMG-Motion-Rhythm.
+
+2026-11-18 사용자 정정 — EXTRACTED: 누적이 아닌 양 모드 연속MISS10으로 수정. PERFECT/GOOD 연속횟수초기화, 누적19/연속10 경로와 성공 후 누적10초과 지속 확인. 자연종료 잔여MISS도 연속횟수 반영. 근전도 긴 노트 전용 유지. 92개 검사·소스 자체검사 통과, 2026.11.18.4 새 빌드 진행. 현재 README/규칙문서/도식/위키 정정, 이전 누적MISS 기록은 이력으로 유지. 도식은 Mermaid 미리보기, Graphify는 graphify .로 수동 실행.
+
+EXTRACTED: 규칙수정2026.11.18.3 EXE 생성·자체검사19항목 통과. ZIP CRC/1322파일전체해시/개인데이터제외 통과, 기존 실행폴더 데이터48파일 원본보존·해시복사. 새 경로 dist_windows_rules_20261118_3/EMG-Motion-Rhythm, release/rules-2026.11.18.3-*에 소스·EXE manifest와 검사·복사 보고서 기록.
+
+2026-11-18 규칙 수정 — EXTRACTED: 사용자 요청으로 양 모드 누적MISS10 즉시 종료·추가 판정 정지·결과 사유10_total_misses 반영. 근전도 생성/샘플/기존 혼합 파일은 최소1초 유지 노트만 사용, 곡끝 공간 부족 시 일반노트 대체 없이 생략. 캐시 혼합노트 재생성. 음악 종료 일괄MISS도10에서 중단. 검사92개 통과, 소스 자체검사 통과. 현재 규칙 문서·Mermaid·위키·README 갱신, 기존 규칙 문서는 과거 표시. 물리 센서/출력 실기TODO 유지. 도식은 Mermaid 미리보기, Graphify는 graphify .로 수동 실행(미실행).
+
+EXTRACTED: 음악 수정 ZIP237.1MiB/1322파일 생성 및 CRC·전체파일 원본일치·개인데이터제외·Leap/OYMotion 의존성과 게임선택 이미지 포함 검사 통과. SHA256 328f21de266b7f58fb1192f63adcecb755b6076213e896e2e5fa3fa6d5117ab1. ZIP 생성 후 기존 사용자 데이터48파일을 새 로컬 폴더에 해시 검증 복사, 원본/구 EXE 보존. 최종 diff 검사 통과.
+
+2026-11-18 음악 빌드 — EXTRACTED: GitHub11c99ac 음악 수정 소스로 dist_windows_music_20261118_2에 EXE 생성. 소스/EXE 자체 검사19항목 통과(실제MP3 PCM 포함), EXE는 개발 Leap SDK 환경 변수 없이 동봉 SDK 검사 통과. 기존 UI/센서입력/legacy_web 변경 없음. 소스 해시와 EXE 대응은 release/music-2026.11.18.2-manifest.json, 실제 곡 검사는 music-implementation-check.json에 기록. README·배포 안내·음악 문서 갱신. 실기 출력·장치 유지 TODO는 유지.
+
+2026-11-18 음악 구현 후속 — EXTRACTED: 사용자 허용으로 GitHub 11c99ac 기준 음악 과제 구현. SHA256 원본 식별·분석 전후/저장 전 변경 거부·양 모드 캐시 파싱 검증, 잘못된 실곡 분석/빈 PCM/NaN 거부, 취소 위치 고정·재시작 초기화·정상 종료 위치 고정, 자연 종료 미판정 노트 일회 집계 추가. 기존 센서 입력·UI 구조·legacy_web 보존. WorkOrder/verify_full_song.py 복구와 docs/check_full_song.py·check_music_source.py 추가, 기존75+추가14=89 검사 통과. 실제 MP3 메타데이터213.773061초/PCM208.013061초, 전체 모노 파형 오차0.0, 양 모드 기준선 계산·전체 PCM 제출 통과(모의 출력). docs/music-timeline.md·diagrams/music-timeline.md 추가, 과제/위키 갱신. 실기 스피커/화면 동기화·센서 장시간 검증 남음. 도식은 Mermaid 미리보기, Graphify는 graphify .로 수동 실행(미실행).
+
 EXTRACTED: Added docs/NEXT_TASKS.md with priorities and acceptance criteria for audio timelines, the full-song test fixture, real armband persistence, menu camera checks, and a verified EXE build. Included docs/music-session-review.md and diagrams/music-session-review.md as observations of the local working tree, not a release guarantee. This commit excludes game source and other pending edits. TODO: implementation and build require a scope permitting code changes under AGENTS.md. View diagrams with Mermaid Markdown preview; run Graphify manually with graphify .
 ## 2026-11-18 전체 구현 Git 공유
 
 EXTRACTED: 사용자가 armband·Leap을 포함한 전체 구현 푸시를 명시하여 기존 문서 전용 제한의 이번 작업 예외로 적용했다. app 소스, OYMotion SDK DLL·NOTICE, 게임 선택 이미지, PyInstaller spec, 검사와 관련 문서를 공유 범위에 포함한다. 개인 설정·보정 프로필·사용자 곡·실행 로그·EXE 산출물은 포함하지 않는다. 소스 검사 75개를 재실행하여 통과했다. 새 EXE 빌드와 실제 장치 검증은 수행하지 않았다. 음악 시간축 차이와 전체 곡 검사 fixture 오류는 docs/NEXT_TASKS.md의 미해결 과제로 유지한다.
+
+
+## 2026-11-18 Webcam selection and speed limit
+
+EXTRACTED: Verified camera sample -> open/fist gesture -> mode card activation, retained advanced profile gate. Added visible camera instructions/status. Default speed 200, slider and persisted settings range 50-200. Release 2026.11.18.9. See docs/camera-selection-speed.md.
+
+
+## 2026-11-18 Reduced note density
+
+EXTRACTED: Pinch/advanced minimum interval 1800ms; EMG rest after hold at least 1800ms. Existing charts filtered on load without rewriting or moving beat times. Regression checks: 124. Release 2026.11.18.10, docs/note-density.md.

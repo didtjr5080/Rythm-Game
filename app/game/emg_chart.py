@@ -1,5 +1,6 @@
-"""One-lane beat contractions and sustained holds, derived from the same song."""
+"""One-lane sustained holds only, derived from the same song."""
 import math
+from app import config
 
 
 def generate_emg_notes(pinch_notes, analysis=None):
@@ -24,14 +25,13 @@ def generate_emg_notes(pinch_notes, analysis=None):
     for stamp in beats:
         if stamp < next_time:
             continue
-        hold_ms = 0
-        if len(notes) % 3 == 2:
-            available = math.floor((duration - 200 - stamp) / beat_ms) * beat_ms
-            hold_beats = max(math.ceil(1000 / beat_ms), min(4, math.floor(4000 / beat_ms)))
-            planned = round(beat_ms * hold_beats)
-            if min(planned, available) >= 1000:
-                hold_ms = round(min(planned, available))
+        available = math.floor((duration - 200 - stamp) / beat_ms) * beat_ms
+        hold_beats = max(math.ceil(1000 / beat_ms), min(4, math.floor(4000 / beat_ms)))
+        planned = round(beat_ms * hold_beats)
+        hold_ms = round(min(planned, available))
+        if hold_ms < 1000:
+            continue  # Never substitute a short tap near the end of the song.
         notes.append({'note_id': len(notes), 'lane': 0, 'hit_time_ms': stamp,
                       'duration_ms': hold_ms})
-        next_time = stamp + hold_ms + max(900, round(beat_ms * 2))
+        next_time = stamp + hold_ms + max(config.MIN_NOTE_INTERVAL_MS, round(beat_ms * 2))
     return notes

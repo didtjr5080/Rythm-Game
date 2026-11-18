@@ -1,4 +1,4 @@
-"""Three seconds of fresh rest samples, then one displayed cent above the mean."""
+"""Record 3.0 seconds; extension is a fresh value at or above the minimum."""
 import math
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -16,6 +16,7 @@ class RestBaseline:
         self.started_at = None
         self.samples = []
         self.baseline_cents = None
+        self.baseline_value = None
 
     @property
     def ready(self):
@@ -23,11 +24,13 @@ class RestBaseline:
 
     @property
     def baseline(self):
+        if self.baseline_value is not None:
+            return self.baseline_value
         return self.baseline_cents / 100 if self.ready else None
 
     @property
     def threshold(self):
-        return (self.baseline_cents + 1) / 100 if self.ready else None
+        return self.baseline
 
     def measure(self, samples, fresh, now):
         if self.ready:
@@ -36,17 +39,40 @@ class RestBaseline:
             self.started_at = None
             self.samples.clear()
             return
-        for value in samples:
+        # A delayed UI tick must not add samples from after the 3.0s window.
+        if self.started_at is not None and now-self.started_at > self.DURATION:
+            self._finish()
+            return
+        values = [float(value) for value in samples]
+        for value in values:
             cents(value)
-        if samples and self.started_at is None:
+        if values and self.started_at is None:
             self.started_at = now
-        self.samples.extend(samples)
+        self.samples.extend(values)
         if self.started_at is not None and now-self.started_at >= self.DURATION and self.samples:
-            self.baseline_cents = cents(math.fsum(self.samples)/len(self.samples))
-            self.samples.clear()
+            self._finish()
+
+    def _finish(self):
+        if self.samples:
+            self.baseline_value = min(self.samples)
+            self.baseline_cents = cents(self.baseline_value)
+
+    @classmethod
+    def from_saved(cls, data):
+        result = cls()
+        values = [float(v) for v in data['samples']]
+        for value in values: cents(value)
+        if not values or min(values) != data['minimum'] or data['duration_seconds'] != cls.DURATION:
+            raise ValueError('Invalid saved EMG baseline.')
+        result.samples = values
+        result._finish()
+        return result
 
     def active(self, value, fresh):
-        return bool(self.ready and fresh and cents(value) >= self.baseline_cents + 1)
+        if not self.ready or not fresh:
+            return False
+        cents(value)  # Validate without rounding the value used for comparison.
+        return float(value) >= self.threshold
 
     def remaining(self, now):
         return self.DURATION if self.started_at is None else max(0., self.DURATION-(now-self.started_at))

@@ -129,3 +129,23 @@ class MenuCameraChecks(unittest.TestCase):
         window.centralWidget().timer.stop()
         self.assertTrue(old.closed)
         self.assertTrue(window.video_session.is_stopped)
+
+    def test_camera_samples_open_then_fist_select_mode(self):
+        window = self.window
+        window.show_game_selection()
+        self.app.processEvents()
+        screen = window.centralWidget()
+        cursor = window.hand_cursor
+        cursor.timer.stop()
+        button = screen.mode_buttons['emg']
+        point = button.mapTo(screen, button.rect().center())
+        x = .15 + .7 * point.x() / (screen.width()-1)
+        y = .12 + .76 * point.y() / (screen.height()-1)
+        worker = window.video_session._worker
+        with patch.object(cursor, '_can_control', return_value=True), patch.object(window, 'show_game_widget') as start:
+            for stamp, count in ((0.,5),(.1,5),(.2,0),(.3,0),(.8,0)):
+                hand = dict(hand_visible=True, x=x, y=y, finger_count=count)
+                with patch.object(worker, 'hand_sample', return_value=(stamp, hand)), patch('app.ui.hand_cursor.time.monotonic', return_value=stamp):
+                    cursor.poll()
+            QTest.qWait(30)
+            start.assert_called_once_with('emg')

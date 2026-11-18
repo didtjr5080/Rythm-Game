@@ -14,7 +14,7 @@ from app.game.rhythm_game_engine import RhythmGameEngine
 from app.i18n import tr
 from app.input.input_fusion import GameInputState, InputFusion
 from app.input.leap_tracker import LeapPinchTracker
-from app.input.rest_baseline import RestBaseline, cents
+from app.input.rest_baseline import RestBaseline
 from app.settings import load_settings
 from app.input.camera import draw_camera_frame
 
@@ -26,12 +26,26 @@ LANE_NAMES = [str(i+1) for i in range(config.LANE_COUNT)]
 
 
 class GameWidget(QWidget):
-    def __init__(self, main_window, notes_path: str | None = None, song_path: str | None = None, mode='pinch'):
+    def __init__(self, main_window, notes_path: str | None = None, song_path: str | None = None, mode='pinch', profile_id=None, guest_leap_thresholds=None):
+        store = getattr(main_window, 'profile_store', None)
+        person = store.get(profile_id) if store is not None and profile_id is not None else None
+        if profile_id is not None and person is None:
+            raise ValueError('선택한 프로필이 삭제되었습니다.')
+        if mode == 'pinch_extension' and (store is None or profile_id is None or not store.unlocked(profile_id)):
+            raise ValueError('상위 모드는 같은 프로필로 기본 두 게임을 정상 완주한 뒤 열립니다.')
+        if person and mode != 'emg' and person['pinch'] is None:
+            raise ValueError('이 프로필의 핀치 보정이 필요합니다.')
         super().__init__()
+        self.profile_store = store
+        self.player_profile_id = profile_id
+        self.player_profile_name = person['name'] if person else None
+        self._emg_baseline_reused = bool(person and person.get('emg') and mode != 'pinch')
         self.main_window = main_window
         self.song_path = song_path
         self.mode = mode
-        self.rest_baseline = RestBaseline() if mode == 'emg' else None
+        self.rest_baseline = RestBaseline() if mode in ('emg', 'pinch_extension') else None
+        if self.rest_baseline is not None and self._emg_baseline_reused:
+            self.rest_baseline = RestBaseline.from_saved(person['emg'])
         self.lane_count = 1 if mode == 'emg' else config.LANE_COUNT
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.settings = load_settings()
@@ -41,10 +55,11 @@ class GameWidget(QWidget):
             use_camera=False,
             emg_threshold=self.settings["emg_threshold"],
             camera_flip=bool(self.settings["camera_flip"]),
-            use_leap=mode == 'pinch',
+            use_leap=mode in ('pinch', 'pinch_extension'),
             produce_rgb=False,
-            use_emg=mode == 'emg',
+            use_emg=mode in ('emg', 'pinch_extension'),
             emg_session=getattr(main_window,'emg_session',None),
+            leap_thresholds=(person['pinch'] if person else guest_leap_thresholds) if mode != 'emg' else None,
         )
         self.session_logger = SessionLogger()
         self.audio_player = AudioPlayer(self.song_path, volume=self.settings["music_volume"])
@@ -65,7 +80,7 @@ class GameWidget(QWidget):
         self.back_button.setObjectName("danger")
         self.back_button.clicked.connect(self.abort_game)
         self.back_button.setFixedSize(96, 38)
-        if self.mode != 'emg':
+        if self.rest_baseline is None or self.rest_baseline.ready:
             self.audio_player.play()
         app = QApplication.instance()
         if app is not None:
@@ -100,6 +115,8 @@ class GameWidget(QWidget):
         return self.engine.is_finished(current_time_ms)
 
     def game_loop(self):
+        if self.finished:
+            return
         if self.song_path and self.audio_player.error:
             error = str(self.audio_player.error)
             owner = self.main_window
@@ -114,8 +131,9 @@ class GameWidget(QWidget):
         input_state, _tracked_frame = self.input_fusion.read(raw_frame)
         if self.mode == 'pinch':
             input_state.pinch_input_source = 'leap_only'
-        if self.mode == 'emg':
-            input_state.emg_value = cents(input_state.emg_value)/100
+        elif self.mode == 'pinch_extension':
+            input_state.pinch_input_source = 'leap_and_emg_extension'
+        if self.rest_baseline is not None:
             if not self.rest_baseline.ready:
                 reader = self.input_fusion.emg_reader
                 samples = getattr(reader, 'samples', None)
@@ -126,12 +144,21 @@ class GameWidget(QWidget):
                 input_state.lane = None
                 self.current_input = input_state
                 if self.rest_baseline.ready:
+                    if self.profile_store is not None and self.player_profile_id is not None:
+                        try:
+                            self.profile_store.save_emg(self.player_profile_id, self.rest_baseline.baseline, self.rest_baseline.samples)
+                        except (OSError, ValueError) as exc:
+                            owner = self.main_window
+                            self.abort_game()
+                            QMessageBox.warning(owner, '근전도 기준 저장 실패', str(exc))
+                            return
                     self.start_time = time.monotonic()
                     self.audio_player.play()
                 self.update()
                 return
             input_state.emg_activated = self.rest_baseline.active(input_state.emg_value, input_state.emg_signal_fresh)
-            input_state.lane = 0 if input_state.emg_activated else None
+            if self.mode == 'emg':
+                input_state.lane = 0 if input_state.emg_activated else None
         self.current_input = input_state
         timings.add('gui_input_and_pixmap_ms', (time.perf_counter()-tick_started)*1000)
 
@@ -153,13 +180,17 @@ class GameWidget(QWidget):
         timings.add('gui_tick_work_ms', (time.perf_counter()-tick_started)*1000)
 
         if self._should_finish(current_time_ms):
-            self.finish_game()
+            if self.song_path and self.audio_player.finished and not self.audio_player.error:
+                self.engine.finalize_unjudged_notes()
+            self.finish_game(reason='miss_limit' if self.engine.miss_limit_reached else 'completed')
             return
         self.update()
 
-    def finish_game(self):
+    def finish_game(self, reason='manual'):
         if self.finished:
             return
+        normal_end = (reason == 'completed' and
+                      (self.audio_player.finished if self.song_path else self.engine.is_finished(self._playback_time_ms())))
         self.finished = True
         self.timer.stop()
         app = QApplication.instance()
@@ -171,9 +202,23 @@ class GameWidget(QWidget):
         self.main_window._last_session_logger = self.session_logger
         session_paths = jobs.submit(self.session_logger.save) if config.SAVE_SESSION_LOG else None
         metrics = calculate_game_metrics(self.engine.score_state, self.session_logger.rows, self.input_delays_ms)
-        metrics['input_mode'] = 'emg' if self.mode == 'emg' else 'pinch_hold'
+        metrics['input_mode'] = self.mode if self.mode != 'pinch' else 'pinch_hold'
+        completed = (normal_end and not self.engine.miss_limit_reached
+                     and not self.audio_player.error and bool(self.engine.notes)
+                     and all(n.judged for n in self.engine.notes))
+        metrics['completed_successfully'] = completed
+        metrics['end_reason'] = ('song_completed' if self.song_path else 'sample_completed') if completed else 'manual_exit'
+        metrics['player_profile_id'] = self.player_profile_id
+        metrics['player_profile_name'] = self.player_profile_name
+        if completed and self.profile_store is not None and self.player_profile_id is not None:
+            try:
+                self.profile_store.record_completion(self.player_profile_id, self.mode)
+            except (OSError, ValueError) as exc:
+                metrics['profile_save_error'] = str(exc)
         if self.mode == 'pinch':
             metrics['pinch_input_source'] = 'leap_only'
+        elif self.mode == 'pinch_extension':
+            metrics['pinch_input_source'] = 'leap_and_emg_extension'
         if self.engine.miss_limit_reached:
             metrics['end_reason'] = '10_consecutive_misses'
             metrics['consecutive_misses'] = self.engine.consecutive_misses
@@ -183,7 +228,11 @@ class GameWidget(QWidget):
         metrics['hold_target_duration_ms'] = sum(n.duration_ms for n in holds)
         if self.rest_baseline is not None:
             metrics['emg_rest_baseline'] = self.rest_baseline.baseline
-            metrics['emg_activation_delta'] = .01
+            metrics['emg_activation_delta'] = 0.
+            metrics['emg_baseline_method'] = 'minimum'
+            metrics['emg_baseline_duration_seconds'] = self.rest_baseline.DURATION
+            metrics['emg_baseline_samples'] = list(self.rest_baseline.samples)
+            metrics['emg_baseline_reused'] = self._emg_baseline_reused
         self.main_window.show_result_screen(metrics, session_paths=session_paths)
         timings.flush()
 
@@ -223,7 +272,7 @@ class GameWidget(QWidget):
         return False
 
     def _handled_keys(self):
-        return {Qt.Key.Key_Escape, Qt.Key.Key_Space} if self.mode == 'emg' else {Qt.Key.Key_Escape}
+        return {Qt.Key.Key_Escape, Qt.Key.Key_Space} if self.rest_baseline is not None else {Qt.Key.Key_Escape}
 
     def keyPressEvent(self, event):
         self._handle_key(event.key(), True)
@@ -232,7 +281,7 @@ class GameWidget(QWidget):
         self._handle_key(event.key(), False)
 
     def _handle_key(self, key, pressed: bool):
-        if self.mode == 'emg' and key == Qt.Key.Key_Space:
+        if self.rest_baseline is not None and key == Qt.Key.Key_Space:
             self.input_fusion.set_space_pressed(pressed)
             return
         if key == Qt.Key.Key_Escape and pressed:
@@ -255,14 +304,15 @@ class GameWidget(QWidget):
         p.translate(offset_x,offset_y)
         p.scale(scale,scale)
         draw_aurora_background(p, QRectF(0,0,1280,720))
+        text(p,QRectF(44,52,650,26),'PLAYER: '+(self.player_profile_name or 'PRACTICE / UNSAVED'),12,'#94A3B8')
         if self.rest_baseline is not None and not self.rest_baseline.ready:
-            text(p,QRectF(240,170,800,70),'REST MEASUREMENT / KEEP STILL',28,'#6EE7B7')
+            text(p,QRectF(240,170,800,70),'EMG RECORDING / 3.0 SECONDS',28,'#6EE7B7')
             remaining = self.rest_baseline.remaining(time.monotonic())
             text(p,QRectF(300,270,680,80),f'{remaining:.1f}s',40)
-            text(p,QRectF(240,380,800,40),f'EMG ACTIVITY: {self.current_input.emg_value:.2f}',20)
+            text(p,QRectF(240,380,800,40),f'EMG ACTIVITY: {self.current_input.emg_value:.4f}',20)
             status = getattr(self.input_fusion.emg_reader, 'status', 'DEMO EMG')
             text(p,QRectF(160,455,960,35),status,11,'#94A3B8')
-            text(p,QRectF(160,510,960,35),'3 SECONDS OF FRESH DATA / THEN BASELINE + 0.01',13,'#94A3B8')
+            text(p,QRectF(160,510,960,35),'RECORD 3.0 SECONDS / EXTENSION AT OR ABOVE MINIMUM',13,'#94A3B8')
             timings.add('paint_work_ms', (time.perf_counter()-paint_started)*1000)
             return
         if self.ar_camera and self.camera_pixmap is not None:
@@ -338,20 +388,22 @@ class GameWidget(QWidget):
             tracker=self.input_fusion.tracker
             if tracker and tracker.last_error:
                 text(p,QRectF(340,35,600,48),tracker.last_error,13,'#FB923C')
-            text(p,QRectF(280,687,720,24),'LEAP MOTION ONLY / HOLD AT THE LINE / ESC: FINISH',10,'#94A3B8')
+            instruction = ('LEAP PINCH + ARMBAND EXTENSION TOGETHER / ESC: FINISH'
+                           if self.mode == 'pinch_extension' else 'LEAP MOTION ONLY / HOLD AT THE LINE / ESC: FINISH')
+            text(p,QRectF(280,687,720,24),instruction,10,'#94A3B8')
         timings.add('paint_work_ms', (time.perf_counter()-paint_started)*1000)
 
     def _draw_lab_hud(self,p):
         if self.mode == 'emg':
             draw_frosted_glass_card(p,QRectF(42,100,282,270),'EMG RHYTHM + HOLD')
             active = self.current_input.emg_activated
-            draw_circular_gauge(p,QRectF(88,145,157,137),float(active),f'{self.current_input.emg_value:.2f}',
-                                'ACTIVE' if active else 'REST')
+            draw_circular_gauge(p,QRectF(88,145,157,137),float(active),f'{self.current_input.emg_value:.4f}',
+                                ('신전' if self.language == 'ko' else 'EXTENSION') if active else 'BELOW MIN')
             reader = self.input_fusion.emg_reader
-            text(p,QRectF(52,305,262,22),f'REST {self.rest_baseline.baseline:.2f} / ON {self.rest_baseline.threshold:.2f}',10,'#94A3B8')
+            text(p,QRectF(52,305,262,22),f'MIN {self.rest_baseline.baseline:.4f} / EXT >= MIN',10,'#94A3B8')
             text(p,QRectF(52,335,262,22),f'BEAT +/-{config.EMG_JUDGE_WINDOW_MS}ms / DIP {config.EMG_HOLD_DROPOUT_MS}ms',9,'#94A3B8')
             draw_frosted_glass_card(p,QRectF(940,70,300,245),'ONE LANE / EMG INPUT ONLY')
-            text(p,QRectF(950,120,280,30),'TAP: NEW CONTRACTION AT BEAT',10,'#6EE7B7')
+            text(p,QRectF(950,120,280,30),'EXTENSION: VALUE >= MINIMUM',10,'#6EE7B7')
             text(p,QRectF(950,165,280,30),'HOLD: KEEP ACTIVE UNTIL TAIL',10,'#C4B5FD')
             text(p,QRectF(950,210,280,30),'RELAX BEFORE THE NEXT NOTE',10,'#94A3B8')
             channels = getattr(self.input_fusion.emg_reader,'channel_rms',None)
@@ -363,10 +415,17 @@ class GameWidget(QWidget):
                 text(p,QRectF(350,390,580,50),f'HOLD {remaining:.1f}s',28,'#6EE7B7')
             self._draw_score_hud(p)
             return
-        draw_frosted_glass_card(p,QRectF(42,100,282,190),'PINCH HOLD MODE')
+        draw_frosted_glass_card(p,QRectF(42,100,282,190),'ADVANCED PINCH + EXT' if self.mode == 'pinch_extension' else 'PINCH HOLD MODE')
         text(p,QRectF(52,145,262,40),'HOLD THE MATCHING PINCH',12,'#6EE7B7')
         text(p,QRectF(52,192,262,30),'WHEN THE NOTE REACHES THE LINE',9,'#94A3B8')
-        text(p,QRectF(52,232,262,30),'LEAP MOTION ONLY',10,'#94A3B8')
+        text(p,QRectF(52,232,262,30),'LEAP + ARMBAND EXTENSION' if self.mode == 'pinch_extension' else 'LEAP MOTION ONLY',10,'#94A3B8')
+        if self.mode == 'pinch_extension':
+            extension = self.current_input.emg_activated and self.current_input.emg_signal_fresh
+            state = 'EXTENSION READY' if extension else 'EXTENSION REQUIRED'
+            draw_frosted_glass_card(p,QRectF(42,315,282,155),'PINCH + EXTENSION')
+            text(p,QRectF(52,357,262,30),state,12,'#6EE7B7' if extension else '#FB923C')
+            text(p,QRectF(52,397,262,22),f'EMG {self.current_input.emg_value:.4f} / MIN {self.rest_baseline.baseline:.4f}',10,'#94A3B8')
+            text(p,QRectF(52,430,262,22),getattr(self.input_fusion.emg_reader,'status','EMG WAITING'),8,'#94A3B8')
         self._draw_camera_hud(p)
         self._draw_score_hud(p)
 
@@ -380,7 +439,7 @@ class GameWidget(QWidget):
     def _draw_score_hud(self, p):
         draw_frosted_glass_card(p,QRectF(1010,337,230,100),'LIVE CALIBRATION')
         count=self.current_input.finger_count
-        status = ('EMG ACTIVE' if self.current_input.emg_activated else 'EMG REST') if self.mode == 'emg' else f"PINCH: {self.current_input.hand_label or '--'}"
+        status = (('신전' if self.language == 'ko' else 'EXTENSION') if self.current_input.emg_activated else 'BELOW MINIMUM') if self.mode == 'emg' else f"PINCH: {self.current_input.hand_label or '--'}"
         text(p,QRectF(1024,376,200,22),status,11)
         detail = 'SUSTAIN UNTIL THE TAIL' if self.mode == 'emg' else finger_summary(self.input_fusion.finger_states)
         text(p,QRectF(1024,400,200,18),detail,8,'#94A3B8')

@@ -4,13 +4,14 @@ import time
 
 from app.input.orion_leapc import OrionReader
 from app.input.pinch_classifier import NAMES, PinchClassifier
-from app.input.leap_calibration import load_profiles
+from app.input.leap_calibration import load_profiles, validate_thresholds
 
 
 class LeapPinchTracker:
     MAX_AGE = .25
 
-    def __init__(self, reader_factory=OrionReader):
+    def __init__(self, reader_factory=OrionReader, thresholds=None):
+        self._thresholds = validate_thresholds(thresholds) if thresholds is not None else None
         self.status = 'LEAP STARTING / RIGHT HAND'
         self.last_error = None
         self._snapshot = None
@@ -23,9 +24,12 @@ class LeapPinchTracker:
     def _run(self, reader_factory):
         self.profile_name = None
         try:
-            profiles = load_profiles()
-            self.profile_name = profiles['active']
-            thresholds = profiles['profiles'].get(self.profile_name)
+            if getattr(self, '_thresholds', None) is not None:
+                thresholds = self._thresholds
+            else:
+                profiles = load_profiles()
+                self.profile_name = profiles['active']
+                thresholds = profiles['profiles'].get(self.profile_name)
         except (OSError, ValueError) as exc:
             self.last_error = 'Leap profile: ' + str(exc)
             thresholds = None

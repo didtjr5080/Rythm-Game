@@ -1,3 +1,19 @@
+- [EXTRACTED: Reduced note frequency, including existing charts](../docs/note-density.md)
+
+- [EXTRACTED: Webcam game selection and note speed 50-200](../docs/camera-selection-speed.md)
+
+- [EXTRACTED: 상위 모드의 핀치+암밴드 첨부 이미지 적용](../docs/game-selection-images.md) — 원본 PNG와 비율 보존, 기본 두 모드 이미지 유지.
+
+- [EXTRACTED: 사람별 보정 저장·삭제·상위 모드 해금](../docs/player-profiles.md) · [Mermaid](../diagrams/player-profiles.md) — 저장값 바로 시작, 같은 프로필의 기본 두 모드 정상 완주 필요, 120개 검사.
+
+- [EXTRACTED: 핀치 + 신전 동시 확인 상위 모드](../docs/pinch-extension-mode.md) · [Mermaid](../diagrams/pinch-extension-mode.md) — 세 번째 선택, 기본 두 모드 보존.
+
+- [EXTRACTED: 근전도 3.0초 기록의 최저값 이상이면 신전](../docs/emg-minimum-baseline.md) · [Mermaid](../diagrams/emg-rest-baseline.md) — 평균·+0.01 제거, 원래 정밀도로 비교, 측정값 결과 기록.
+
+- [EXTRACTED: 두 모드 연속 MISS10 종료·근전도 긴 노트 전용](../docs/game-rule-update.md) · [Mermaid](../diagrams/game-rule-update.md) — PERFECT/GOOD 시 연속 횟수 초기화.
+
+- [EXTRACTED: 음악 원본·재생 시간축·전체 곡 종료 보강](../docs/music-timeline.md) · [Mermaid](../diagrams/music-timeline.md) — 89개 검사, 양 모드 전체 곡·오류·취소와 실제 MP3 PCM 검증.
+
 - [EXTRACTED: 메뉴 MediaPipe 손 커서 복원 / 게임 진입 전 카메라·추론 종료](../docs/menu-hand-cursor.md) · [Mermaid](../diagrams/menu-hand-cursor.md)
 
 - [EXTRACTED: 게임 선택 이미지 카드·설명 제거](../docs/game-selection-images.md) · [Mermaid](../diagrams/game-selection-images.md)

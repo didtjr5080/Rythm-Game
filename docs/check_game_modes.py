@@ -21,8 +21,8 @@ class GameModeChecks(unittest.TestCase):
     def test_generation_beat_grid_holds_rest_and_song_end(self):
         analysis = {'bpm': 120., 'duration': 30., 'beats': [i*.5 for i in range(60)]}
         notes = generate_emg_notes([], analysis)
-        self.assertTrue(any(n['duration_ms'] == 0 for n in notes))
-        self.assertTrue(any(n['duration_ms'] >= 1000 for n in notes))
+        self.assertTrue(notes)
+        self.assertTrue(all(n['duration_ms'] >= 1000 for n in notes))
         for note in notes:
             self.assertEqual(note['lane'], 0)
             self.assertIn(note['hit_time_ms']/1000, analysis['beats'])
@@ -44,7 +44,7 @@ class GameModeChecks(unittest.TestCase):
             self.assertTrue(pinch_game.notes and emg_game.notes)
             self.assertTrue(all(n.duration_ms == 0 for n in pinch_game.notes))
             self.assertTrue(all(n.lane == 0 for n in emg_game.notes))
-            self.assertTrue(any(n.duration_ms >= 1000 for n in emg_game.notes))
+            self.assertTrue(all(n.duration_ms >= 1000 for n in emg_game.notes))
             self.assertEqual(RhythmGameEngine.from_json_file(path).mode, 'pinch')
 
     def test_old_flat_seconds_chart_and_mode_samples(self):
@@ -52,8 +52,22 @@ class GameModeChecks(unittest.TestCase):
             path = Path(folder)/'legacy.json'
             path.write_text(json.dumps([{'lane': 1, 'time': 3.}, {'lane': 2, 'time': 5.}]))
             self.assertTrue(RhythmGameEngine.from_json_file(path, 'pinch').notes)
-            self.assertTrue(any(n.duration_ms for n in RhythmGameEngine.from_json_file(path, 'emg').notes))
-        self.assertTrue(any(n.duration_ms for n in RhythmGameEngine(mode='emg').notes))
+            self.assertTrue(all(n.duration_ms >= 1000 for n in RhythmGameEngine.from_json_file(path, 'emg').notes))
+        self.assertTrue(all(n.duration_ms >= 1000 for n in RhythmGameEngine(mode='emg').notes))
+
+    def test_legacy_mixed_chart_is_replaced_with_holds_when_loaded(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)/'mixed.json'
+            path.write_text(json.dumps({'notes': [{'lane': 0, 'hit_time_ms': 2000}],
+                                        'emg_notes': [{'lane': 0, 'hit_time_ms': 2000, 'duration_ms': 0}],
+                                        'duration_seconds': 10}))
+            engine = RhythmGameEngine.from_json_file(path, mode='emg')
+            self.assertTrue(engine.notes)
+            self.assertTrue(all(n.duration_ms >= 1000 for n in engine.notes))
+            self.assertLessEqual(max(n.end_time_ms for n in engine.notes), 9800)
+
+    def test_short_song_does_not_fall_back_to_taps(self):
+        self.assertEqual(generate_emg_notes([], {'duration': 2.5, 'bpm': 120}), [])
 
     def test_tap_requires_new_contraction_and_no_hand(self):
         engine = RhythmGameEngine([Note(0, 0, 1000), Note(1, 0, 2000)], mode='emg')

@@ -1,4 +1,4 @@
-# EXTRACTED: 시작 전 3초 안정 측정
+# EXTRACTED: 시작 전 3.0초 기록의 최저값 기준
 
 ```mermaid
 flowchart TD
@@ -6,12 +6,12 @@ flowchart TD
     Stream[Shared filtered EMG stream] --> Fresh{Fresh samples?}
     Fresh -->|no| Reset[Reset samples and timer / wait]
     Reset --> Wait
-    Wait --> Measure[Collect 3 continuous seconds of rest samples]
+    Wait --> Measure[Record valid samples for 3.0 seconds]
     Fresh -->|yes| Measure
-    Measure --> Baseline[Mean rest level / precision 0.01]
+    Measure --> Baseline[Minimum recorded value / no comparison rounding]
     Baseline --> Start[Start music and chart at time zero]
-    Start --> Compare{Current displayed ACTIVITY at least baseline + 0.01?}
-    Compare -->|yes and fresh| Active[Active EMG input]
+    Start --> Compare{Current raw ACTIVITY at least minimum?}
+    Compare -->|yes and fresh| Active[Extension EMG input]
     Compare -->|no or stale| Inactive[Inactive]
     Active --> Judge[Beat and sustained-note judgement]
     Inactive --> Judge

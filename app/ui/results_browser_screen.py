@@ -85,7 +85,7 @@ class ResultsBrowserScreen(QWidget):
             data = self.load_result(path)
             score = data.get("score", 0)
             accuracy = float(data.get("accuracy", 0.0))
-            mode = 'EMG' if data.get('input_mode') == 'emg' else 'PINCH' if data.get('input_mode') == 'pinch_hold' else 'LEGACY'
+            mode = {'emg': 'EMG', 'pinch_hold': 'PINCH', 'pinch_extension': 'PINCH + EXT'}.get(data.get('input_mode'), 'LEGACY')
             item = QListWidgetItem(f"[{mode}] {self.display_result_name(path)}\nScore {score}  |  Accuracy {accuracy:.2f}%")
             item.setData(Qt.ItemDataRole.UserRole, str(path))
             self.result_list.addItem(item)
@@ -138,7 +138,7 @@ class ResultsBrowserScreen(QWidget):
         data = self.load_result(path)
         self.clear_detail()
 
-        mode = 'EMG' if data.get('input_mode') == 'emg' else 'PINCH' if data.get('input_mode') == 'pinch_hold' else 'LEGACY'
+        mode = {'emg': 'EMG', 'pinch_hold': 'PINCH', 'pinch_extension': 'PINCH + EXT'}.get(data.get('input_mode'), 'LEGACY')
         title = QLabel(f'[{mode}] {self.display_result_name(path)}')
         title.setObjectName("heroTitle")
         title.setWordWrap(True)

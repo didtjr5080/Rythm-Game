@@ -11,12 +11,12 @@ from app.game.score import ScoreState
 
 class RhythmGameEngine:
     def __init__(self, notes: list[Note] | None = None, mode='pinch'):
-        if mode not in ('pinch', 'emg'):
+        if mode not in ('pinch', 'emg', 'pinch_extension'):
             raise ValueError('Unknown game mode.')
         self.mode = mode
         self._previous_activation = False
         self.notes = sorted(notes if notes is not None else self.generate_sample_notes(mode), key=lambda note: note.hit_time_ms)
-        if mode == 'pinch':
+        if mode != 'emg':
             for previous, current in zip(self.notes, self.notes[1:]):
                 if previous.lane == 1 and current.lane == 2:
                     current.lane = 0
@@ -34,12 +34,12 @@ class RhythmGameEngine:
 
     @property
     def miss_limit_reached(self):
-        return self.mode == 'pinch' and self.consecutive_misses >= 10
+        return self.consecutive_misses >= 10
 
     @staticmethod
     def generate_sample_notes(mode='pinch') -> list[Note]:
         lanes = [0, 1, 0, 3, 2, 1, 0, 1, 3, 2, 0, 3]
-        notes = [Note(note_id=i, lane=lane, hit_time_ms=2500 + i * 950) for i, lane in enumerate(lanes)]
+        notes = [Note(note_id=i, lane=lane, hit_time_ms=2500 + i * 1900) for i, lane in enumerate(lanes)]
         if mode == 'emg':
             return [RhythmGameEngine.normalize_note_dict(n, i) for i, n in enumerate(generate_emg_notes(
                 [{'lane': n.lane, 'hit_time_ms': n.hit_time_ms} for n in notes]))]
@@ -62,13 +62,20 @@ class RhythmGameEngine:
             payload = json.load(handle)
         raw_notes = payload.get("notes", payload) if isinstance(payload, dict) else payload
         if mode == 'emg':
-            raw_notes = (payload['emg_notes'] if isinstance(payload, dict) and 'emg_notes' in payload
-                         else generate_emg_notes(raw_notes, payload if isinstance(payload, dict) else None))
+            saved = payload.get('emg_notes') if isinstance(payload, dict) else None
+            raw_notes = (saved if saved and all(int(n.get('duration_ms', 0)) >= 1000 for n in saved)
+                         else generate_emg_notes(raw_notes, dict(payload, duration=payload.get('duration_seconds', 0)) if isinstance(payload, dict) else None))
         notes = [cls.normalize_note_dict(item, i) for i, item in enumerate(raw_notes)]
-        if mode == 'pinch':
+        if mode != 'emg':
             for note in notes:
                 note.duration_ms = 0
-        return cls(notes=notes, mode=mode)
+        # Apply the same density to old cached charts without rewriting personal files.
+        spaced = []
+        for note in sorted(notes, key=lambda item: item.hit_time_ms):
+            previous_end = spaced[-1].end_time_ms if spaced else None
+            if previous_end is None or note.hit_time_ms - previous_end >= config.MIN_NOTE_INTERVAL_MS:
+                spaced.append(note)
+        return cls(notes=spaced, mode=mode)
 
     def visible_notes(
         self,
@@ -111,10 +118,10 @@ class RhythmGameEngine:
             index = self._next_note_index
             note = self.notes[index]
             result = (judge_emg_note(note, input_state, current_time_ms, config, triggered)
-                      if self.mode == 'emg' else judge_note(note, input_state, current_time_ms, config))
+                      if self.mode == 'emg' else judge_note(note, input_state, current_time_ms, config,
+                                                           require_extension=self.mode == 'pinch_extension'))
             if result:
-                if self.mode == 'pinch':
-                    self.consecutive_misses = self.consecutive_misses + 1 if result == 'MISS' else 0
+                self.consecutive_misses = self.consecutive_misses + 1 if result == 'MISS' else 0
                 self.score_state.apply_result(result)
                 self.last_result = result
                 self.last_judged_note_index = index
@@ -128,3 +135,19 @@ class RhythmGameEngine:
             return True
         self._advance_cursor()
         return self._next_note_index == len(self.notes) or current_time_ms > self._last_end_time + 1500
+
+    def finalize_unjudged_notes(self):
+        """Account for every remaining note when a real track ends naturally."""
+        for index, note in enumerate(self.notes):
+            if self.miss_limit_reached:
+                break
+            if note.judged:
+                continue
+            note.judged = True
+            note.holding = False
+            note.result = 'MISS'
+            self.consecutive_misses += 1
+            self.score_state.apply_result('MISS')
+            self.last_result = 'MISS'
+            self.last_judged_note_index = index
+        self._advance_cursor()

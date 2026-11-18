@@ -1,4 +1,4 @@
-def judge_note(note, input_state, current_time_ms, config):
+def judge_note(note, input_state, current_time_ms, config, require_extension=False):
     if note.judged:
         return None
 
@@ -15,6 +15,7 @@ def judge_note(note, input_state, current_time_ms, config):
         input_state.hand_visible
         and input_state.lane == note.lane
         and timing_error <= config.JUDGE_WINDOW_MS
+        and (not require_extension or (input_state.emg_activated and input_state.emg_signal_fresh))
     ):
         note.judged = True
         note.result = "PERFECT" if timing_error <= config.PERFECT_WINDOW_MS else "GOOD"

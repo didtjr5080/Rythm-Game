@@ -14,6 +14,25 @@ def game(mode='pinch'):
 
 
 class MissLimitChecks(unittest.TestCase):
+    def test_emg_success_resets_streak_even_when_total_exceeds_ten(self):
+        from app.input.input_fusion import GameInputState
+        engine = game('emg')
+        absent = GameInputState(None, 0., False, False, None, None, None, 0.)
+        for i in range(9):
+            engine.update(absent, (i+1)*1000+351)
+        active = GameInputState(0, 20., True, False, None, None, None, 0.)
+        self.assertEqual(engine.update(active, 10000), 'PERFECT')
+        self.assertFalse(engine.miss_limit_reached)
+        engine.update(absent, 11351)
+        self.assertFalse(engine.miss_limit_reached)
+        self.assertEqual(engine.score_state.miss_count, 10)
+        self.assertEqual(engine.consecutive_misses, 1)
+        for stamp in range(12351, 20352, 1000):
+            engine.update(absent, stamp)
+        self.assertTrue(engine.miss_limit_reached)
+        self.assertEqual(engine.consecutive_misses, 10)
+        self.assertEqual(engine.score_state.miss_count, 19)
+
     def test_tenth_miss_ends_pinch_and_freezes_further_scoring(self):
         engine = game()
         for i in range(9):
@@ -36,16 +55,20 @@ class MissLimitChecks(unittest.TestCase):
             self.assertEqual(engine.update(pinch(), 10000+offset), expected)
             self.assertEqual(engine.consecutive_misses, 0)
             for i in range(9):
-                engine.update(pinch(None, False), 11000+i*1000+101)
-            self.assertFalse(engine.miss_limit_reached)
+                engine.update(pinch(None, False), 11101+i*1000)
+                self.assertFalse(engine.miss_limit_reached)
+            self.assertEqual(engine.score_state.miss_count, 18)
+            engine.update(pinch(None, False), 20101)
+            self.assertTrue(engine.miss_limit_reached)
+            self.assertEqual(engine.consecutive_misses, 10)
 
-    def test_emg_mode_is_unchanged(self):
+    def test_emg_mode_also_stops_at_ten_consecutive_misses(self):
         engine = game('emg')
         for i in range(12):
             engine.update(pinch(None, False), (i+1)*1000+351)
-        self.assertEqual(engine.score_state.miss_count, 12)
-        self.assertFalse(engine.miss_limit_reached)
-        self.assertFalse(engine.is_finished(12351))
+        self.assertEqual(engine.score_state.miss_count, 10)
+        self.assertTrue(engine.miss_limit_reached)
+        self.assertTrue(engine.is_finished(12351))
 
     def test_music_does_not_delay_game_over_and_result_is_saved(self):
         os.environ['QT_QPA_PLATFORM'] = 'offscreen'

@@ -71,7 +71,7 @@ class SettingsScreen(QWidget):
         self.window_mode_combo = QComboBox()
         self.resolution_combo = QComboBox()
         self.volume_slider, self.volume_value = self._slider(0, 100, int(self.settings["music_volume"] * 100))
-        self.note_speed_slider, self.note_speed_value = self._slider(200, 900, int(self.settings["note_speed"]))
+        self.note_speed_slider, self.note_speed_value = self._slider(50, 200, int(self.settings["note_speed"]))
         self.judge_line_slider, self.judge_line_value = self._slider(
             55, 92, int(self.settings["judgement_line_y_ratio"] * 100)
         )
@@ -188,7 +188,7 @@ class SettingsScreen(QWidget):
         layout.addWidget(QLabel('EMG signal type'),17,0); layout.addWidget(self.emg_signal_combo,17,1)
         connect=QPushButton('Connect / Test EMG'); connect.clicked.connect(self.start_emg_test); layout.addWidget(connect,18,0)
         layout.addWidget(self.emg_status,18,1,1,2)
-        layout.addWidget(QLabel('EMG: 3 seconds of rest before each game / baseline + 0.01'),19,0,1,3)
+        layout.addWidget(QLabel('EMG: record 3.0 seconds / value >= recorded minimum means extension'),19,0,1,3)
         outer.addWidget(panel)
 
         row = QHBoxLayout()
@@ -295,7 +295,7 @@ class SettingsScreen(QWidget):
         reader.threshold=self.emg_threshold_slider.value()
         value,activated=reader.read()
         status=getattr(reader,'status','MOCK EMG / SPACE')
-        self.emg_status.setText(f'{status} / ACTIVITY: {value:.2f} / GAME: 3s rest, then +0.01')
+        self.emg_status.setText(f'{status} / ACTIVITY: {value:.4f} / GAME: 3.0s recording, then >= minimum')
         channels = getattr(reader, 'channel_rms', None)
         if channels is not None:
             self.emg_status.setText(self.emg_status.text()+'\nCH1-8 RMS: '+', '.join(f'{v:.2f}' for v in channels))

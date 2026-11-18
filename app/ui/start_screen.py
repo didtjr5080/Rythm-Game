@@ -25,6 +25,7 @@ from app.audio.note_generator_adapter import (
     find_saved_notes_for_song,
     generate_notes_from_analysis,
     save_notes_json,
+    audio_signature,
 )
 from app.i18n import tr
 from app.settings import load_settings
@@ -33,6 +34,7 @@ from app.settings import load_settings
 from app.ui.theme import AuroraScreen, GlassPanel
 from app.ui.dashboard import Instrument
 from app.game.rhythm_game_engine import RhythmGameEngine
+from app.ui.profile_dialog import ProfileBar
 import json
 
 class StartScreen(AuroraScreen):
@@ -78,6 +80,9 @@ class StartScreen(AuroraScreen):
         title=QLabel('EMG MOTION RHYTHM / SONIC LAB'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         outer.addWidget(title)
         sub=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / 2 FINGERS + WRIST BACK/IN = SCROLL UP/DOWN / STRAIGHT = STOP'); sub.setWordWrap(True); sub.setObjectName('subtitle'); sub.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(sub)
+        if getattr(self.main_window, 'profile_store', None) is not None:
+            self.profile_bar = ProfileBar(self.main_window)
+            outer.addWidget(self.profile_bar)
         row=QHBoxLayout(); row.setSpacing(24)
         left=GlassPanel('SONG & BEAT DSP ANALYSIS'); ll=QVBoxLayout(left); ll.setContentsMargins(16,42,16,16)
         self.song_instrument=Instrument('song'); self.song_instrument.compact=True
@@ -302,8 +307,12 @@ class StartScreen(AuroraScreen):
             return
         song = self.main_window.selected_song_path
         def prepare():
+            signature = audio_signature(song) if song else None
             analysis = analyze_audio_file(song) if song else {}
-            if song: analysis['file_id'] = Path(song).stem
+            if song:
+                analysis['file_id'] = Path(song).stem
+                # Bind even injected/custom analyzers to the source at job start.
+                analysis.setdefault('audio_signature', signature)
             notes = generate_notes_from_analysis(analysis)
             path = save_notes_json(notes, song_path=song, analysis=analysis)
             return analysis, path

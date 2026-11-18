@@ -61,7 +61,17 @@ class ResultScreen(AuroraScreen):
 
     def _build(self):
         outer=QVBoxLayout(self); outer.setContentsMargins(50,28,50,24)
-        title=QLabel('GAME OVER / 10 CONSECUTIVE MISSES' if self.metrics.get('end_reason') == '10_consecutive_misses' else 'POST-GAME REHABILITATION ANALYTICS'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(title)
+        reason = self.metrics.get('end_reason')
+        titles = {'10_total_misses': 'GAME OVER / 10 TOTAL MISSES',
+                  '10_consecutive_misses': 'GAME OVER / 10 CONSECUTIVE MISSES'}
+        title=QLabel(titles.get(reason, 'POST-GAME REHABILITATION ANALYTICS')); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(title)
+        if self.metrics.get('player_profile_name'):
+            status = '정상 완주' if self.metrics.get('completed_successfully') else '완주 기록 없음'
+            player = QLabel(f"플레이어: {self.metrics['player_profile_name']} / {status}")
+            player.setTextFormat(Qt.TextFormat.PlainText); outer.addWidget(player)
+        if self.metrics.get('profile_save_error'):
+            warning = QLabel('프로필 완료 기록 저장 실패: ' + str(self.metrics['profile_save_error']))
+            warning.setWordWrap(True); warning.setStyleSheet('color: #fb923c;'); outer.addWidget(warning)
         self.save_status=QLabel(f'SAVING / {self.result_path.name}'); self.save_status.setObjectName('subtitle'); outer.addWidget(self.save_status)
         self.retry_save=QPushButton('Retry Save'); self.retry_save.clicked.connect(self._retry_save); self.retry_save.hide(); outer.addWidget(self.retry_save)
         hint=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / 2 FINGERS + WRIST BACK/IN = SCROLL UP/DOWN / STRAIGHT = STOP')
@@ -73,11 +83,14 @@ class ResultScreen(AuroraScreen):
             if kind=='song':
                 instrument.analysis=getattr(self.main_window,'song_analyses',{}).get(getattr(self.main_window,'selected_song_path',None),{})
                 path=getattr(self.main_window,'notes_path',None)
-                try: instrument.notes=RhythmGameEngine.from_json_file(path, mode='emg' if self.metrics.get('input_mode') == 'emg' else 'pinch').notes if path else RhythmGameEngine.generate_sample_notes('emg' if self.metrics.get('input_mode') == 'emg' else 'pinch')
+                chart_mode = {'emg': 'emg', 'pinch_extension': 'pinch_extension'}.get(self.metrics.get('input_mode'), 'pinch')
+                try: instrument.notes=RhythmGameEngine.from_json_file(path, mode=chart_mode).notes if path else RhythmGameEngine.generate_sample_notes(chart_mode)
                 except (ValueError,OSError,TypeError): pass
             if kind=='bio': instrument.sensor_status='SESSION COMPLETE // PREVIEW'
             layout.addWidget(instrument,1)
             if kind=='performance':
+                if self.metrics.get('input_mode') == 'pinch_extension':
+                    layout.addWidget(QLabel('ADVANCED / PINCH + EXTENSION'))
                 if self.metrics.get('input_mode') == 'emg':
                     layout.addWidget(QLabel(f"EMG MODE / HOLD: {self.metrics.get('hold_success_count',0)} / {self.metrics.get('hold_note_count',0)}"))
                 extra=QLabel(("PINCH HOLD / " if self.metrics.get("input_mode") == "pinch_hold" else f"Avg EMG: {self.metrics.get('avg_emg',0):.1f} / ") + f"Delay: {self.metrics.get('avg_input_delay_ms',0):+.1f}ms"); extra.setWordWrap(True); layout.addWidget(extra)

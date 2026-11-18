@@ -1,5 +1,31 @@
 EMG Motion Rhythm - Windows x64 portable build
 
+Current build: 2026.11.18.10
+Reduced note frequency: pinch/advanced minimum gap 1.8s; EMG rest after hold 1.8s.
+Existing charts also use lower density without rewriting files or shifting beats.
+Game selection: open hand moves the webcam cursor; close fist once to select a card.
+Note speed is 50-200; older settings above 200 are clamped when loaded.
+The advanced PINCH + EXTENSION selection card uses the supplied pinch-and-armband image.
+Use the player selector / profile manager to create, select or delete a person.
+Saved pinch and EMG calibration is reused; new values are measured only when missing.
+Advanced mode unlocks only after BOTH basic modes finish normally for that profile.
+Manual exit, playback errors and 10 consecutive misses do not grant completion.
+Practice without a selected profile does not save calibration or unlock advanced mode.
+New advanced mode: PINCH + EXTENSION (4 lanes).
+Score only when the matching Leap pinch AND fresh armband extension are present together.
+Complete Leap calibration, then 3.0s EMG recording before music begins.
+The original Leap-only pinch and armband-only sustained-note modes remain available.
+EMG: record 3.0 seconds before play; current value >= minimum means EXTENSION.
+Use the actual recorded minimum, with no mean, +0.01 offset or comparison rounding.
+Both modes stop immediately at 10 CONSECUTIVE misses; PERFECT or GOOD resets the streak.
+EMG rhythm/hold uses sustained notes only (at least 1 second), including old charts.
+Leap Motion pinch rhythm (4 lanes) and OYMotion armband EMG rhythm/hold (1 lane).
+Webcam hand navigation is used in menus; gameplay uses the selected sensor only.
+Generate Notes again after upgrading: source SHA256 is required for cached charts.
+Audio analysis/playback errors stop preparation or gameplay without sample substitution.
+The remaining instructions below include historical controls from older builds;
+use the current game selection and calibration screens for sensor setup.
+
 Extract the entire ZIP to a writable folder and run EMG-Motion-Rhythm.exe.
 Keep _internal next to the EXE; copying only the EXE will not work.
 No Python installation is required. Music and personal runtime data are not bundled.

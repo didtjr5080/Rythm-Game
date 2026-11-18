@@ -119,5 +119,5 @@ class Instrument(QWidget):
             image_bounds=draw_camera_frame(p,view,self.camera_pixmap)
             p.fillRect(view,QColor(8,11,18,40)); p.restore()
         text(p,view,'THUMB + INDEX / MIDDLE / RING / PINKY',10,'#6EE7B7')
-        draw_circular_gauge(p,QRectF(72,250,156,146),0,'3s','AUTO REST / +0.01')
+        draw_circular_gauge(p,QRectF(72,250,156,146),0,'3.0s','MINIMUM / EXTENSION')
         text(p,QRectF(0,397,300,23),self.sensor_status if not self.tracker_warning else self.tracker_warning,8,'#FB923C' if self.tracker_warning else '#6EE7B7')

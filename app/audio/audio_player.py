@@ -13,6 +13,8 @@ class AudioPlayer:
         self.duration_seconds = 0.0
         self.started_at: float | None = None
         self.output_latency_seconds = 0.0
+        self.decoder_backend = None
+        self._stopped_position_ms = None
         self._loading = False
         self._finished = threading.Event()
         self._cancelled = threading.Event()
@@ -28,8 +30,12 @@ class AudioPlayer:
 
     @property
     def position_ms(self):
+        if self._stopped_position_ms is not None:
+            return self._stopped_position_ms
         if self.started_at is None:
             return 0
+        if self.finished and not self.error:
+            return int(self.duration_seconds * 1000)
         elapsed = max(0.0, time.monotonic()-self.started_at)
         return int(min(elapsed, self.duration_seconds)*1000)
 
@@ -39,6 +45,10 @@ class AudioPlayer:
         self._cancelled.clear()
         self._finished.clear()
         self.started_at = None
+        self.duration_seconds = 0.0
+        self.output_latency_seconds = 0.0
+        self.decoder_backend = None
+        self._stopped_position_ms = None
         self.error = None
         if self.path is None:
             self._finished.set()
@@ -60,7 +70,12 @@ class AudioPlayer:
             self._sd = sd
             data, sample_rate = self._load_audio()
             if data is None:
+                if self.error is None:
+                    raise ValueError('Audio decoder returned no data.')
                 return
+            if (sample_rate <= 0 or len(data) == 0 or data.ndim not in (1, 2)
+                    or not np.isfinite(data).all()):
+                raise ValueError('Audio decoder returned invalid or empty samples.')
             self.duration_seconds = len(data)/sample_rate
             if data.ndim == 1:
                 data = np.column_stack([data, data])
@@ -89,6 +104,7 @@ class AudioPlayer:
             import soundfile as sf
 
             data, sample_rate = sf.read(str(self.path), always_2d=False, dtype="float32")
+            self.decoder_backend = 'soundfile'
             return data, sample_rate
         except Exception:
             pass
@@ -98,6 +114,7 @@ class AudioPlayer:
             data, sample_rate = librosa.load(str(self.path), sr=None, mono=False)
             if data.ndim == 2:
                 data = data.T
+            self.decoder_backend = 'librosa'
             return data.astype("float32"), sample_rate
         except Exception as exc:
             self.error = f"Audio decode failed: {exc}"
@@ -105,6 +122,7 @@ class AudioPlayer:
             return None, None
 
     def stop(self):
+        self._stopped_position_ms = self.position_ms
         self._cancelled.set()
         try:
             with self._play_lock:

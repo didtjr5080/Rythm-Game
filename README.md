@@ -1,6 +1,14 @@
+EXTRACTED: Latest 2026.11.18.10 reduces note frequency: pinch/advanced minimum gap 1.8s, EMG minimum rest after holds 1.8s, including existing charts. [GitHub release and Windows download](https://github.com/didtjr5080/Rythm-Game/releases/tag/v2026.11.18.10). Local EXE: `dist_windows_density_20261118_10/EMG-Motion-Rhythm/EMG-Motion-Rhythm.exe`. [Details](docs/note-density.md). Older release paths below are historical.
+
+EXTRACTED: Current build 2026.11.18.9: webcam mode selection with open-hand movement and fist selection, camera status on selection page, note speed 50-200. EXE: `dist_windows_camera_20261118_9/EMG-Motion-Rhythm/EMG-Motion-Rhythm.exe`. See [details](docs/camera-selection-speed.md).
+
 # EMG Motion Rhythm
 
-EXTRACTED: 2026-11-18 전체 구현 소스에는 Leap 전용 4레인 핀치, OYMotion USB armband 근전도 모드, 공유 EMG 세션, 메뉴 전용 MediaPipe 커서와 게임 선택 이미지가 포함됩니다. 아래 EXE 기록과 현재 소스 검증은 구분합니다. 소스 검사 75개 통과; 음악 분석/재생 길이 차이와 전체 곡 검사 오류, 실제 장치 검증은 [다음 과제](docs/NEXT_TASKS.md)에 남아 있습니다. 이번 소스 공유에서는 새 EXE를 빌드하지 않았습니다. Leap SDK는 별도 설치 후 `LEAPSDK_INSTALL_LOCATION`으로 지정하며 기본 경로는 `C:/EMG-Motion-Rhythm/LeapSDK`입니다. OYMotion 필수 DLL과 배포 고지는 `app/vendor/oymotion/`에 포함됩니다.
+## 최신 로컬 선택 이미지 빌드 — 2026.11.18.8
+
+EXTRACTED: 핀치+암밴드 상위 모드의 선택 카드를 사용자가 첨부한 이미지로 변경했습니다. 프로필 보정 저장·삭제·상위 모드 해금 규칙은 유지합니다. 최신 EXE는 `dist_windows_image_20261118_8/EMG-Motion-Rhythm/EMG-Motion-Rhythm.exe`입니다. 소스120개 검사와 실제 카드 렌더링이 통과했습니다. [이미지 안내](docs/game-selection-images.md), [프로필 사용법](docs/player-profiles.md), [배포 안내](docs/windows-release.md)를 참고하세요. 최신8·직전7만 보관합니다. 아래 경로는 과거 기록이며 파일 존재를 보장하지 않습니다.
+
+EXTRACTED: 2026-11-18 GitHub 전체 구현 소스에는 Leap 전용 4레인 핀치, OYMotion USB armband 근전도 모드, 공유 EMG 세션, 메뉴 전용 MediaPipe 커서와 게임 선택 이미지가 포함됩니다. 음악 과제의 최신 상태는 위 안내와 [다음 과제](docs/NEXT_TASKS.md)를 참고하세요. 개발 실행의 Leap SDK는 별도 설치 후 `LEAPSDK_INSTALL_LOCATION`으로 지정하며 기본 경로는 `C:/EMG-Motion-Rhythm/LeapSDK`입니다. OYMotion 필수 DLL과 배포 고지는 `app/vendor/oymotion/`에 포함됩니다.
 
 EXTRACTED: 최신 버전은 메인·게임 선택·설정·결과에서 웹캠 MediaPipe 손 커서를 사용하고, 게임 시작 전 카메라·손 추론 종료를 확인합니다. 게임은 핀치 Leap 전용 / 근전도 armband 전용입니다. 최신 EXE: `dist_windows_menu_hand_cursor_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. [메뉴 손 커서 안내·실제 카메라 검증 제한](docs/menu-hand-cursor.md). 아래 웹캠 비활성 설명은 이전 기록입니다.
 

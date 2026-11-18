@@ -1,6 +1,8 @@
 import json
 import sys
 import time
+import hashlib
+import math
 from pathlib import Path
 
 from app import config
@@ -29,10 +31,16 @@ def find_saved_notes_for_song(song_path: str | Path | None) -> Path | None:
     path = notes_path_for_song(song_path)
     try:
         payload = json.loads(path.read_text(encoding='utf-8'))
-        if (payload.get('audio_signature') == audio_signature(song_path)
-                and payload.get('notes') and isinstance(payload.get('emg_notes'), list)):
+        if (payload.get('schema_version') == 3
+                and payload.get('audio_signature') == audio_signature(song_path)
+                and payload.get('notes') and payload.get('emg_notes')
+                and all(int(n.get('duration_ms', 0)) >= 1000 for n in payload['emg_notes'])):
+            for mode in ('pinch', 'emg'):
+                engine = RhythmGameEngine.from_json_file(path, mode=mode)
+                if not engine.notes or any(n.hit_time_ms < 0 for n in engine.notes):
+                    return None
             return path
-    except (OSError, ValueError, TypeError, AttributeError):
+    except (OSError, ValueError, TypeError, AttributeError, KeyError, OverflowError):
         pass
     return None
 
@@ -40,7 +48,15 @@ def find_saved_notes_for_song(song_path: str | Path | None) -> Path | None:
 def audio_signature(song_path):
     song = Path(song_path)
     info = song.stat()
-    return {'filename':song.name, 'size':info.st_size, 'mtime_ns':info.st_mtime_ns}
+    with song.open('rb') as stream:
+        hasher = hashlib.sha256()
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            hasher.update(block)
+        digest = hasher.hexdigest()
+    after = song.stat()
+    if (info.st_size, info.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+        raise ValueError('Song changed while reading. Generate Notes again.')
+    return {'filename':song.name, 'size':info.st_size, 'mtime_ns':info.st_mtime_ns, 'sha256':digest}
 
 
 def chart_to_motion_notes(chart: dict) -> list[dict]:
@@ -86,6 +102,10 @@ def simplify_for_emg(notes: list[dict], min_interval_ms: int = config.MIN_NOTE_I
 
 
 def generate_notes_from_analysis(analysis: dict, difficulty: str = "normal") -> list[dict]:
+    if analysis:
+        duration = float(analysis.get('duration', 0))
+        if not math.isfinite(duration) or duration <= 0:
+            raise ValueError('Selected song has no valid analysis. Generate Notes again.')
     try:
         from note_generator import generate_notes
 
@@ -112,8 +132,15 @@ def save_notes_json(notes: list[dict], output_dir: str | Path | None = None, son
     notes = simplify_for_emg(notes)
     from app.atomic_io import atomic_text
     emg_notes = generate_emg_notes(notes, analysis)
+    signature = audio_signature(song_path) if song_path else None
+    analyzed_signature = (analysis or {}).get('audio_signature')
+    if song_path and analyzed_signature is not None and analyzed_signature != signature:
+        raise ValueError('Song changed after analysis. Generate Notes again.')
+    if song_path and (not notes or not emg_notes):
+        raise ValueError('Selected song has no playable chart.')
     atomic_text(path,json.dumps({'schema_version': 3, "lane_count": config.LANE_COUNT,
-                                'audio_signature':audio_signature(song_path) if song_path else None,
+                                'audio_signature':signature,
+                                'audio_source':(analysis or {}).get('audio_source'),
                                 'duration_seconds':(analysis or {}).get('duration',0),
                                 "notes": notes, 'emg_notes': emg_notes}, indent=2))
     return path

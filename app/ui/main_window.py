@@ -16,6 +16,8 @@ from app.ui.hand_cursor import HandCursorController
 from app.ui.leap_calibration_dialog import LeapCalibrationDialog
 from app.input.video_session import VideoSession
 from app.input.emg_session import EMGSession
+from app.player_profiles import ProfileStore
+from app.ui.profile_dialog import ProfileDialog
 
 
 class MainWindow(QMainWindow):
@@ -27,6 +29,7 @@ class MainWindow(QMainWindow):
         self.selected_song_path: str | None = None
         self.notes_path: str | None = None
         self.game_mode = 'pinch'
+        self.profile_store = ProfileStore()
         self.setWindowTitle(config.PROJECT_NAME)
         self.apply_window_settings()
         self.hand_cursor = HandCursorController(self)
@@ -133,9 +136,20 @@ class MainWindow(QMainWindow):
 
     def show_game_widget(self, game_mode=None):
         mode = self.game_mode if game_mode is None else game_mode
-        if mode not in ('pinch', 'emg'):
+        if mode not in ('pinch', 'emg', 'pinch_extension'):
             raise ValueError('Unknown game mode.')
         if self._defer_hand_navigation(lambda: self.show_game_widget(mode)): return
+        store = getattr(self, 'profile_store', None)
+        profile_id, person = (None, None)
+        if store is not None:
+            try:
+                profile_id, person = store.active()
+                if mode == 'pinch_extension' and not store.unlocked(profile_id):
+                    QMessageBox.warning(self, '상위 모드 잠김', '같은 프로필로 핀치와 근전도 게임을 모두 정상 완주하세요.')
+                    return
+            except (OSError, ValueError) as exc:
+                QMessageBox.warning(self, '프로필 오류', str(exc))
+                return
         if self.selected_song_path and not self._ensure_song_notes(lambda: self.show_game_widget(mode)): return
         self._release_current_inputs()
         if self.notes_path:
@@ -158,17 +172,45 @@ class MainWindow(QMainWindow):
                 QTimer.singleShot(30, retry_after_camera_close)
                 return
         self._pending_game_start = None
-        if mode == 'pinch':
-            dialog = LeapCalibrationDialog(self)
+        guest_thresholds = None
+        if mode in ('pinch', 'pinch_extension') and not (person and person['pinch']):
+            dialog = (LeapCalibrationDialog(self, player_profile=person or {'name': '연습', 'pinch': None})
+                      if store is not None else LeapCalibrationDialog(self))
             try:
                 if dialog.exec() != QDialog.DialogCode.Accepted:
                     self._attach_navigation_camera()
                     return
+                if person is not None:
+                    try:
+                        store.save_pinch(profile_id, dialog.calibrated_thresholds)
+                    except (OSError, ValueError) as exc:
+                        QMessageBox.warning(self, '보정 저장 실패', str(exc))
+                        self._attach_navigation_camera()
+                        return
+                elif store is not None and isinstance(dialog.calibrated_thresholds, dict):
+                    guest_thresholds = dialog.calibrated_thresholds
             finally:
                 dialog.deleteLater()
+        options = {'profile_id': profile_id} if store is not None else {}
+        if guest_thresholds is not None: options['guest_leap_thresholds'] = guest_thresholds
+        try:
+            game = GameWidget(self, notes_path=self.notes_path, song_path=self.selected_song_path,
+                              mode=mode, **options)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, '게임 준비 실패', str(exc))
+            self._attach_navigation_camera()
+            return
         self.game_mode = mode
-        self.setCentralWidget(GameWidget(self, notes_path=self.notes_path, song_path=self.selected_song_path,
-                                        mode=mode))
+        self.setCentralWidget(game)
+
+    def show_profile_dialog(self):
+        if self._defer_hand_navigation(self.show_profile_dialog): return
+        dialog = ProfileDialog(self)
+        try: dialog.exec()
+        finally: dialog.deleteLater()
+        screen = self.centralWidget()
+        if hasattr(screen, 'profile_bar'): screen.profile_bar.refresh()
+        if hasattr(screen, 'refresh_profile_state'): screen.refresh_profile_state()
 
     def _defer_hand_navigation(self, callback):
         cursor = getattr(self, 'hand_cursor', None)
