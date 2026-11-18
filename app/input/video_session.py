@@ -74,6 +74,11 @@ class VideoSession(QObject):
             if getattr(worker, '_thread', None) is not None:
                 self._retiring.append(worker)
 
+    @property
+    def is_stopped(self):
+        self._retiring = [worker for worker in self._retiring if worker._thread.is_alive()]
+        return self._worker is None and not self._retiring
+
     def shutdown(self):
         self.stop()
         # At application exit, let native camera teardown finish before DLL unload.

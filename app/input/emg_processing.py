@@ -29,4 +29,4 @@ def calibration_thresholds(rest, contractions, recoveries):
     active_level = median(median(block) for block in contractions)
     difference = active_level-rest_level
     # Use the measured direction and levels directly, without a signal-quality gate.
-    return round(rest_level+.6*difference, 3), round(rest_level+.2*difference, 3)
+    return round(rest_level+.35*difference, 3), round(rest_level+.10*difference, 3)

@@ -1,11 +1,10 @@
 import time
 import math
 from app.performance import timings
-from collections import deque
 
 from PyQt6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPixmap, QLinearGradient, QPolygonF, QPainterPath
-from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
+from PyQt6.QtWidgets import QApplication, QMessageBox, QPushButton, QWidget
 
 from app import config
 from app.analytics.game_metrics import calculate_game_metrics
@@ -14,9 +13,10 @@ from app.audio.audio_player import AudioPlayer
 from app.game.rhythm_game_engine import RhythmGameEngine
 from app.i18n import tr
 from app.input.input_fusion import GameInputState, InputFusion
+from app.input.leap_tracker import LeapPinchTracker
+from app.input.rest_baseline import RestBaseline, cents
 from app.settings import load_settings
 from app.input.camera import draw_camera_frame
-from app.input.live_video import open_live_video
 
 
 from app.ui.theme import (draw_aurora_background, draw_frosted_glass_card, draw_crystal_note,
@@ -26,35 +26,35 @@ LANE_NAMES = [str(i+1) for i in range(config.LANE_COUNT)]
 
 
 class GameWidget(QWidget):
-    def __init__(self, main_window, notes_path: str | None = None, song_path: str | None = None):
+    def __init__(self, main_window, notes_path: str | None = None, song_path: str | None = None, mode='pinch'):
         super().__init__()
         self.main_window = main_window
         self.song_path = song_path
+        self.mode = mode
+        self.rest_baseline = RestBaseline() if mode == 'emg' else None
+        self.lane_count = 1 if mode == 'emg' else config.LANE_COUNT
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.settings = load_settings()
         self.language = self.settings["language"]
-        self.engine = RhythmGameEngine.from_json_file(notes_path) if notes_path else RhythmGameEngine()
-        self.video_worker = open_live_video(self.main_window, self.settings, enabled=config.USE_CAMERA)
+        self.engine = RhythmGameEngine.from_json_file(notes_path, mode=mode) if notes_path else RhythmGameEngine(mode=mode)
         self.input_fusion = InputFusion(
-            use_camera=config.USE_CAMERA and self.settings["camera_enabled"],
+            use_camera=False,
             emg_threshold=self.settings["emg_threshold"],
             camera_flip=bool(self.settings["camera_flip"]),
-            hand_tracker=self.video_worker if config.USE_CAMERA and self.settings['camera_enabled'] else None,
+            use_leap=mode == 'pinch',
             produce_rgb=False,
+            use_emg=mode == 'emg',
+            emg_session=getattr(main_window,'emg_session',None),
         )
         self.session_logger = SessionLogger()
         self.audio_player = AudioPlayer(self.song_path, volume=self.settings["music_volume"])
         self.start_time = time.monotonic()
         self.current_input = GameInputState(None, 0.0, False, False, None, None, None, time.time(), None, None, None)
         self.ar_camera = False
-        self.raw_history = deque(maxlen=120)
-        self.filtered_history = deque(maxlen=120)
         self.ripples = []
-        self.previous_activation = False
         self.camera_pixmap = None
         self.camera_debug_pixmap = None
         self.camera_flip = bool(self.settings["camera_flip"])
-        self.manual_lane: int | None = None
         self.input_delays_ms: list[float] = []
         self.result_flash: str | None = None
         self.result_flash_time_ms = -9999
@@ -65,8 +65,8 @@ class GameWidget(QWidget):
         self.back_button.setObjectName("danger")
         self.back_button.clicked.connect(self.abort_game)
         self.back_button.setFixedSize(96, 38)
-        self._open_camera()
-        self.audio_player.play()
+        if self.mode != 'emg':
+            self.audio_player.play()
         app = QApplication.instance()
         if app is not None:
             app.installEventFilter(self)
@@ -75,70 +75,66 @@ class GameWidget(QWidget):
         self.timer.timeout.connect(self.game_loop)
         self.timer.start(max(1, int(1000 / config.FPS)))
 
-    def _open_camera(self):
-        import cv2
-        self.camera_source = self.video_worker
-        self.capture = None
-        self.cv2 = cv2
-
-    def _read_camera_frame(self):
-        return self.camera_source.read()
-
-    def _update_camera_pixmap(self, frame):
-        if not self.ar_camera and not (self.settings.get('show_game_hud', True) and self.settings.get('show_camera_debug', True)):
-            frame = None
-        frame_key = (id(frame), self.camera_flip)
-        if frame is not None and getattr(self, '_camera_frame_key', None) == frame_key:
-            return
-        self._camera_frame_key = frame_key
-        self._camera_frame_reference = frame
-        if frame is None or self.cv2 is None:
-            self.camera_pixmap = None
-            self.camera_debug_pixmap = None
-            return
-        try:
-            if self.camera_flip:
-                frame = self.cv2.flip(frame, 1)
-            rgb = self.cv2.cvtColor(frame, self.cv2.COLOR_BGR2RGB)
-            height, width, channels = rgb.shape
-            image = QImage(rgb.data, width, height, rgb.strides[0], QImage.Format.Format_RGB888)
-            self.camera_pixmap = QPixmap.fromImage(image.copy())
-            self.camera_debug_pixmap = None
-        except Exception:
-            self.camera_pixmap = None
-            self.camera_debug_pixmap = None
-
     def _playback_time_ms(self):
-        if self.song_path and not self.audio_player.error:
+        if self.rest_baseline is not None and not self.rest_baseline.ready:
+            return 0
+        if self.song_path:
+            if self.audio_player.error:
+                return 0
+            if self.audio_player.finished:
+                if not hasattr(self, '_audio_finished_at'):
+                    self._audio_finished_at = time.monotonic()
+                return self.audio_player.position_ms + int((time.monotonic()-self._audio_finished_at)*1000)
             return self.audio_player.position_ms
         return int((time.monotonic()-self.start_time)*1000)
 
     def _should_finish(self, current_time_ms):
+        if self.engine.miss_limit_reached:
+            return True
         if self.song_path and not self.audio_player.error:
+            if self.mode == 'emg' and self.audio_player.finished and any(
+                    n.holding and current_time_ms <= n.end_time_ms+config.EMG_HOLD_DROPOUT_MS
+                    for n in self.engine.notes):
+                return False
             return self.audio_player.finished
         return self.engine.is_finished(current_time_ms)
 
     def game_loop(self):
+        if self.song_path and self.audio_player.error:
+            error = str(self.audio_player.error)
+            owner = self.main_window
+            self.abort_game()
+            QMessageBox.warning(owner, '음악 재생 실패', error)
+            return
         tick_started = time.perf_counter()
         if hasattr(self, '_previous_tick'): timings.add('gui_tick_interval_ms', (tick_started-self._previous_tick)*1000)
         self._previous_tick = tick_started
         current_time_ms = self._playback_time_ms()
-        raw_frame = self._read_camera_frame()
+        raw_frame = None
         input_state, _tracked_frame = self.input_fusion.read(raw_frame)
-        if not input_state.hand_visible and self.manual_lane is not None:
-            input_state.lane = self.manual_lane
-            input_state.hand_visible = True
-            input_state.hand_x = (self.manual_lane + 0.5) / config.LANE_COUNT
-            input_state.hand_y = 0.5
+        if self.mode == 'pinch':
+            input_state.pinch_input_source = 'leap_only'
+        if self.mode == 'emg':
+            input_state.emg_value = cents(input_state.emg_value)/100
+            if not self.rest_baseline.ready:
+                reader = self.input_fusion.emg_reader
+                samples = getattr(reader, 'samples', None)
+                if samples is None:
+                    samples = [input_state.emg_value]  # Explicit demo reader has no packet list.
+                self.rest_baseline.measure(samples, input_state.emg_signal_fresh, time.monotonic())
+                input_state.emg_activated = False
+                input_state.lane = None
+                self.current_input = input_state
+                if self.rest_baseline.ready:
+                    self.start_time = time.monotonic()
+                    self.audio_player.play()
+                self.update()
+                return
+            input_state.emg_activated = self.rest_baseline.active(input_state.emg_value, input_state.emg_signal_fresh)
+            input_state.lane = 0 if input_state.emg_activated else None
         self.current_input = input_state
-        self._update_camera_pixmap(raw_frame)
         timings.add('gui_input_and_pixmap_ms', (time.perf_counter()-tick_started)*1000)
 
-        self.raw_history.append(self.input_fusion.raw_emg_value)
-        self.filtered_history.append(self.input_fusion.filtered_emg_value)
-        if input_state.emg_activated and not self.previous_activation:
-            self.ripples.append((current_time_ms, input_state.lane if input_state.lane is not None else config.LANE_COUNT//2))
-        self.previous_activation = input_state.emg_activated
         self.ripples = [(t,l) for t,l in self.ripples if current_time_ms-t<800]
         if self.song_path and self.audio_player.loading:
             self.update()
@@ -146,7 +142,7 @@ class GameWidget(QWidget):
         result = self.engine.update(input_state, current_time_ms)
         note_index = self.engine.last_judged_note_index
         if result in {"PERFECT", "GOOD"} and 0 <= note_index < len(self.engine.notes):
-            delay = current_time_ms - self.engine.notes[note_index].hit_time_ms
+            delay = current_time_ms - self.engine.notes[note_index].end_time_ms
             self.input_delays_ms.append(delay)
             self.input_fusion.last_timing_error_ms = delay
             self.ripples.append((current_time_ms, self.engine.notes[note_index].lane))
@@ -170,12 +166,24 @@ class GameWidget(QWidget):
         if app is not None:
             app.removeEventFilter(self)
         self.audio_player.stop()
-        self.camera_source.release()
         self.input_fusion.close()
         from app.background import jobs
         self.main_window._last_session_logger = self.session_logger
         session_paths = jobs.submit(self.session_logger.save) if config.SAVE_SESSION_LOG else None
         metrics = calculate_game_metrics(self.engine.score_state, self.session_logger.rows, self.input_delays_ms)
+        metrics['input_mode'] = 'emg' if self.mode == 'emg' else 'pinch_hold'
+        if self.mode == 'pinch':
+            metrics['pinch_input_source'] = 'leap_only'
+        if self.engine.miss_limit_reached:
+            metrics['end_reason'] = '10_consecutive_misses'
+            metrics['consecutive_misses'] = self.engine.consecutive_misses
+        holds = [n for n in self.engine.notes if n.duration_ms]
+        metrics['hold_note_count'] = len(holds)
+        metrics['hold_success_count'] = sum(n.result in ('PERFECT', 'GOOD') for n in holds)
+        metrics['hold_target_duration_ms'] = sum(n.duration_ms for n in holds)
+        if self.rest_baseline is not None:
+            metrics['emg_rest_baseline'] = self.rest_baseline.baseline
+            metrics['emg_activation_delta'] = .01
         self.main_window.show_result_screen(metrics, session_paths=session_paths)
         timings.flush()
 
@@ -188,7 +196,6 @@ class GameWidget(QWidget):
         if app is not None:
             app.removeEventFilter(self)
         self.audio_player.stop()
-        self.camera_source.release()
         self.input_fusion.close()
         self.main_window.show_start_screen()
 
@@ -215,21 +222,8 @@ class GameWidget(QWidget):
             return event.key() == Qt.Key.Key_Space
         return False
 
-    @staticmethod
-    def _handled_keys():
-        return {
-            Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4, Qt.Key.Key_5,
-            Qt.Key.Key_Space,
-            Qt.Key.Key_Escape,
-            Qt.Key.Key_Left,
-            Qt.Key.Key_Down,
-            Qt.Key.Key_Right,
-            Qt.Key.Key_A,
-            Qt.Key.Key_S,
-            Qt.Key.Key_D,
-            Qt.Key.Key_F,
-            Qt.Key.Key_V,
-        }
+    def _handled_keys(self):
+        return {Qt.Key.Key_Escape, Qt.Key.Key_Space} if self.mode == 'emg' else {Qt.Key.Key_Escape}
 
     def keyPressEvent(self, event):
         self._handle_key(event.key(), True)
@@ -238,27 +232,15 @@ class GameWidget(QWidget):
         self._handle_key(event.key(), False)
 
     def _handle_key(self, key, pressed: bool):
+        if self.mode == 'emg' and key == Qt.Key.Key_Space:
+            self.input_fusion.set_space_pressed(pressed)
+            return
         if key == Qt.Key.Key_Escape and pressed:
+            if self.rest_baseline is not None and not self.rest_baseline.ready:
+                self.abort_game()
+                return
             self.finish_game()
             return
-        if key == Qt.Key.Key_Space:
-            self.input_fusion.set_space_pressed(pressed)
-        elif not pressed:
-            return
-        elif key in (Qt.Key.Key_Left, Qt.Key.Key_A):
-            self.manual_lane = 0
-        elif key in (Qt.Key.Key_Down, Qt.Key.Key_S):
-            self.manual_lane = config.LANE_COUNT//2
-        elif key in (Qt.Key.Key_Right, Qt.Key.Key_D):
-            self.manual_lane = config.LANE_COUNT-1
-        elif Qt.Key.Key_1 <= key <= Qt.Key.Key_5:
-            self.manual_lane = key - Qt.Key.Key_1
-        elif key == Qt.Key.Key_V:
-            self.ar_camera = not self.ar_camera
-        elif key == Qt.Key.Key_F:
-            self.camera_flip = not self.camera_flip
-            self.input_fusion.set_camera_flip(self.camera_flip)
-            print(f"Camera flip set to {self.camera_flip}")
 
     def paintEvent(self, event):
         paint_started = time.perf_counter()
@@ -273,6 +255,16 @@ class GameWidget(QWidget):
         p.translate(offset_x,offset_y)
         p.scale(scale,scale)
         draw_aurora_background(p, QRectF(0,0,1280,720))
+        if self.rest_baseline is not None and not self.rest_baseline.ready:
+            text(p,QRectF(240,170,800,70),'REST MEASUREMENT / KEEP STILL',28,'#6EE7B7')
+            remaining = self.rest_baseline.remaining(time.monotonic())
+            text(p,QRectF(300,270,680,80),f'{remaining:.1f}s',40)
+            text(p,QRectF(240,380,800,40),f'EMG ACTIVITY: {self.current_input.emg_value:.2f}',20)
+            status = getattr(self.input_fusion.emg_reader, 'status', 'DEMO EMG')
+            text(p,QRectF(160,455,960,35),status,11,'#94A3B8')
+            text(p,QRectF(160,510,960,35),'3 SECONDS OF FRESH DATA / THEN BASELINE + 0.01',13,'#94A3B8')
+            timings.add('paint_work_ms', (time.perf_counter()-paint_started)*1000)
+            return
         if self.ar_camera and self.camera_pixmap is not None:
             p.save(); p.setOpacity(.18); p.drawPixmap(QRectF(0,0,1280,720),self.camera_pixmap,QRectF(self.camera_pixmap.rect())); p.restore()
         top, bottom = 216.,720.
@@ -280,18 +272,18 @@ class GameWidget(QWidget):
             t=(y-top)/(bottom-top)
             return 640-(90+320*t), 640+(90+320*t)
         def lane_x(y,lane):
-            left,right=edge(y); return left+(right-left)*(lane+.5)/config.LANE_COUNT
+            left,right=edge(y); return left+(right-left)*(lane+.5)/self.lane_count
         g=QLinearGradient(0,top,0,bottom); g.setColorAt(0,QColor(16,24,39,25)); g.setColorAt(1,QColor(70,90,105,165))
         poly=QPolygonF([QPointF(550,top),QPointF(730,top),QPointF(1050,bottom),QPointF(230,bottom)])
         p.setBrush(g); p.setPen(QPen(QColor(210,240,240,90),2)); p.drawPolygon(poly)
         lane=self.current_input.lane
         if lane is not None:
-            left,right=edge(bottom); tw=180/config.LANE_COUNT; bw=(right-left)/config.LANE_COUNT
+            left,right=edge(bottom); tw=180/self.lane_count; bw=(right-left)/self.lane_count
             beam=QLinearGradient(0,top,0,bottom); beam.setColorAt(0,QColor(16,185,129,0)); beam.setColorAt(1,QColor(16,185,129,55))
             p.setBrush(beam); p.setPen(Qt.PenStyle.NoPen); p.drawPolygon(QPolygonF([QPointF(550+tw*lane,top),QPointF(550+tw*(lane+1),top),QPointF(left+bw*(lane+1),bottom),QPointF(left+bw*lane,bottom)]))
-        for i in range(config.LANE_COUNT+1):
-            p.setPen(QPen(QColor('#6EE7B7' if i==0 else '#C4B5FD') if i in (0,config.LANE_COUNT) else QColor(200,220,230,55),2 if i in (0,config.LANE_COUNT) else 1))
-            p.drawLine(QPointF(550+i*180/config.LANE_COUNT,top),QPointF(230+i*820/config.LANE_COUNT,bottom))
+        for i in range(self.lane_count+1):
+            p.setPen(QPen(QColor('#6EE7B7' if i==0 else '#C4B5FD') if i in (0,self.lane_count) else QColor(200,220,230,55),2 if i in (0,self.lane_count) else 1))
+            p.drawLine(QPointF(550+i*180/self.lane_count,top),QPointF(230+i*820/self.lane_count,bottom))
         judge_y=720*float(self.settings['judgement_line_y_ratio'])
         left,right=edge(judge_y)
         laser=QLinearGradient(left,0,right,0); laser.setColorAt(0,QColor('#6EE7B7')); laser.setColorAt(1,QColor('#C4B5FD'))
@@ -302,10 +294,23 @@ class GameWidget(QWidget):
         for note in reversed(self.engine.notes_in_time_range(now-travel*.13, now+travel)):
             if note.judged: continue
             progress=1-(note.hit_time_ms-now)/travel
+            if note.duration_ms and now >= note.hit_time_ms:
+                progress = 1.
             if not 0<=progress<=1.13: continue
             depth=progress**1.65
             y=top+(judge_y-top)*depth
             x=lane_x(y,note.lane); size=14+depth*64
+            if note.duration_ms:
+                tail_progress = max(0., min(1., 1-(note.end_time_ms-now)/travel))
+                tail_y = top+(judge_y-top)*tail_progress**1.65
+                tail_x = lane_x(tail_y,note.lane)
+                tail_width = 10+tail_progress*18
+                body = QPolygonF([QPointF(tail_x-tail_width,tail_y),QPointF(tail_x+tail_width,tail_y),
+                                  QPointF(x+size*.3,y),QPointF(x-size*.3,y)])
+                p.setBrush(QColor(110,231,183,150) if note.holding else QColor(196,181,253,120))
+                p.setPen(QPen(QColor('#6EE7B7' if note.holding else '#C4B5FD'),2))
+                p.drawPolygon(body)
+                p.drawLine(QPointF(tail_x-tail_width,tail_y),QPointF(tail_x+tail_width,tail_y))
             draw_crystal_note(p,QRectF(x-size/2,y-size*.65,size,size*.7),note.lane==2)
         for born,lane in self.ripples:
             age=(now-born)/800; x=lane_x(judge_y,lane)
@@ -324,55 +329,61 @@ class GameWidget(QWidget):
         if self.song_path:
             status = self.audio_player.error or ('LOADING AUDIO...' if self.audio_player.loading else f'{self.audio_player.position_ms/1000:.0f}s / {self.audio_player.duration_seconds:.0f}s')
             text(p,QRectF(320,626,640,22),status,10,'#94A3B8')
-        text(p,QRectF(300,654,680,24),self.camera_source.status+' / 1-5 FINGERS = LANES 1-5 / FIST = NO LANE',9,'#94A3B8')
-        tracker=self.input_fusion.tracker
-        if tracker and not tracker.backend_is_mediapipe:
-            text(p,QRectF(340,35,600,48),'MEDIAPIPE INACTIVE / CHECK CAMERA TEST IN SETTINGS',13,'#FB923C')
-        text(p,QRectF(280,687,720,24),'1-5: LANE / SPACE: DEMO ONLY  /  F: FLIP  /  V: AR CAMERA',10,'#94A3B8')
+        if self.mode == 'emg':
+            reader = self.input_fusion.emg_reader
+            text(p,QRectF(300,654,680,24),getattr(reader,'status','MOCK EMG / SPACE TO CONTRACT'),9,'#94A3B8')
+            text(p,QRectF(280,687,720,24),'EMG: CONTRACT ON BEAT / HOLD LONG NOTES / REST BETWEEN NOTES',10,'#94A3B8')
+        else:
+            text(p,QRectF(300,654,680,24),getattr(self.input_fusion.tracker,'status','LEAP WAITING')+' / THUMB + INDEX/MIDDLE/RING/PINKY = 1/2/3/4',9,'#94A3B8')
+            tracker=self.input_fusion.tracker
+            if tracker and tracker.last_error:
+                text(p,QRectF(340,35,600,48),tracker.last_error,13,'#FB923C')
+            text(p,QRectF(280,687,720,24),'LEAP MOTION ONLY / HOLD AT THE LINE / ESC: FINISH',10,'#94A3B8')
         timings.add('paint_work_ms', (time.perf_counter()-paint_started)*1000)
 
     def _draw_lab_hud(self,p):
-        draw_frosted_glass_card(p,QRectF(42,100,282,190),'EMG DSP FILTER & THRESHOLD')
-        draw_waveform(p,QRectF(62,155,242,105),self.raw_history,self.filtered_history)
-        draw_frosted_glass_card(p,QRectF(42,320,250,220),'EMG BIO-SIGNAL')
-        reader=self.input_fusion.emg_reader
-        active=self.current_input.emg_activated
-        draw_circular_gauge(p,QRectF(88,350,157,137),float(active),f'{self.current_input.emg_value:.2f}','ACTIVE' if active else 'REST')
-        release=getattr(reader,'release_level',reader.threshold*.6)
-        direction='DOWN' if getattr(reader,'falling_activation',False) else 'UP'
-        text(p,QRectF(50,491,234,20),f'ON {reader.threshold:.3f} / OFF {release:.3f} / {direction}',8,'#94A3B8')
-        text(p,QRectF(50,516,234,18),getattr(self.input_fusion.emg_reader,'status','MOCK EMG'),8,'#94A3B8')
-        if self.settings.get('show_camera_debug', True): self._draw_camera_hud(p)
+        if self.mode == 'emg':
+            draw_frosted_glass_card(p,QRectF(42,100,282,270),'EMG RHYTHM + HOLD')
+            active = self.current_input.emg_activated
+            draw_circular_gauge(p,QRectF(88,145,157,137),float(active),f'{self.current_input.emg_value:.2f}',
+                                'ACTIVE' if active else 'REST')
+            reader = self.input_fusion.emg_reader
+            text(p,QRectF(52,305,262,22),f'REST {self.rest_baseline.baseline:.2f} / ON {self.rest_baseline.threshold:.2f}',10,'#94A3B8')
+            text(p,QRectF(52,335,262,22),f'BEAT +/-{config.EMG_JUDGE_WINDOW_MS}ms / DIP {config.EMG_HOLD_DROPOUT_MS}ms',9,'#94A3B8')
+            draw_frosted_glass_card(p,QRectF(940,70,300,245),'ONE LANE / EMG INPUT ONLY')
+            text(p,QRectF(950,120,280,30),'TAP: NEW CONTRACTION AT BEAT',10,'#6EE7B7')
+            text(p,QRectF(950,165,280,30),'HOLD: KEEP ACTIVE UNTIL TAIL',10,'#C4B5FD')
+            text(p,QRectF(950,210,280,30),'RELAX BEFORE THE NEXT NOTE',10,'#94A3B8')
+            channels = getattr(self.input_fusion.emg_reader,'channel_rms',None)
+            if channels is not None:
+                text(p,QRectF(942,253,296,22),'8CH RMS: '+', '.join(f'{v:.0f}' for v in channels),8,'#6EE7B7')
+            holding = next((n for n in self.engine.notes if n.holding),None)
+            if holding:
+                remaining = max(0,holding.end_time_ms-self._playback_time_ms())/1000
+                text(p,QRectF(350,390,580,50),f'HOLD {remaining:.1f}s',28,'#6EE7B7')
+            self._draw_score_hud(p)
+            return
+        draw_frosted_glass_card(p,QRectF(42,100,282,190),'PINCH HOLD MODE')
+        text(p,QRectF(52,145,262,40),'HOLD THE MATCHING PINCH',12,'#6EE7B7')
+        text(p,QRectF(52,192,262,30),'WHEN THE NOTE REACHES THE LINE',9,'#94A3B8')
+        text(p,QRectF(52,232,262,30),'LEAP MOTION ONLY',10,'#94A3B8')
+        self._draw_camera_hud(p)
         self._draw_score_hud(p)
 
-    def _draw_camera_hud(self, p):
-        draw_frosted_glass_card(p,QRectF(940,70,300,245),'LIVE WEBCAM FEED & HAND TRACKING')
-        view=QRectF(952,110,276,185)
-        p.save(); clip=QPainterPath(); clip.addRoundedRect(view,8,8); p.setClipPath(clip)
-        if self.camera_pixmap is not None:
-            image_bounds=draw_camera_frame(p,view,self.camera_pixmap)
-            p.fillRect(view,QColor(8,11,18,45))
-        else:
-            p.fillRect(view,QColor(8,16,24,180))
-            for i in range(12):
-                p.setPen(QColor(100,180,170,22)); x=view.x()+i*25; p.drawLine(QPointF(x,view.top()),QPointF(x,view.bottom()))
-        landmarks=self.input_fusion.hand_landmarks_norm
-        if landmarks and self.camera_pixmap is not None:
-            draw_hand_skeleton_overlay(p,image_bounds if landmarks and self.camera_pixmap is not None else view.adjusted(20,5,-20,-20),landmarks,time.monotonic(),finger_states=self.input_fusion.finger_states)
-        lane=self.current_input.lane
-        for i in range(config.LANE_COUNT):
-            cell=QRectF(view.x()+i*view.width()/config.LANE_COUNT,view.y(),view.width()/config.LANE_COUNT,view.height())
-            p.setBrush(Qt.BrushStyle.NoBrush); p.setPen(QPen(QColor('#6EE7B7') if i==lane else QColor(255,255,255,40),2 if i==lane else 1)); p.drawRect(cell)
-            text(p,QRectF(cell.x(),cell.bottom()-22,cell.width(),20),LANE_NAMES[i],8)
-        p.restore()
-        fallback=not self.input_fusion.hand_landmarks_norm
-        text(p,QRectF(950,298,280,16),('LIVE CAMERA / NO LANDMARKS' if self.camera_pixmap is not None else self.camera_source.status) if fallback else 'LIVE 21-POINT TRACKING',8,'#94A3B8')
+    def _draw_camera_hud(self,p):
+        draw_frosted_glass_card(p,QRectF(940,70,300,245),'LEAP MOTION / RIGHT HAND')
+        for i, name in enumerate(('INDEX','MIDDLE','RING','PINKY')):
+            color = '#6EE7B7' if self.current_input.lane == i else '#94A3B8'
+            text(p,QRectF(952,115+i*35,276,30),f'{i+1}: THUMB + {name}',12,color)
+        text(p,QRectF(950,275,280,30),getattr(self.input_fusion.tracker,'status','LEAP WAITING'),8,'#94A3B8')
 
     def _draw_score_hud(self, p):
         draw_frosted_glass_card(p,QRectF(1010,337,230,100),'LIVE CALIBRATION')
         count=self.current_input.finger_count
-        text(p,QRectF(1024,376,200,22),f"FINGERS: {count if count is not None else '--'} / {self.current_input.hand_label or '--'}",11)
-        text(p,QRectF(1024,400,200,18),finger_summary(self.input_fusion.finger_states),8,'#94A3B8')
+        status = ('EMG ACTIVE' if self.current_input.emg_activated else 'EMG REST') if self.mode == 'emg' else f"PINCH: {self.current_input.hand_label or '--'}"
+        text(p,QRectF(1024,376,200,22),status,11)
+        detail = 'SUSTAIN UNTIL THE TAIL' if self.mode == 'emg' else finger_summary(self.input_fusion.finger_states)
+        text(p,QRectF(1024,400,200,18),detail,8,'#94A3B8')
         lane=self.current_input.lane
         text(p,QRectF(1024,417,200,16),f'LANE: {LANE_NAMES[lane] if lane is not None else chr(45)}',9,'#6EE7B7')
         draw_frosted_glass_card(p,QRectF(1010,450,230,60))
@@ -386,6 +397,5 @@ class GameWidget(QWidget):
         app = QApplication.instance()
         if app is not None: app.removeEventFilter(self)
         self.audio_player.stop()
-        self.camera_source.release()
         self.input_fusion.close()
         super().closeEvent(event)

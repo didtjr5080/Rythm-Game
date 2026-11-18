@@ -12,6 +12,7 @@ class AudioPlayer:
         self.error: str | None = None
         self.duration_seconds = 0.0
         self.started_at: float | None = None
+        self.output_latency_seconds = 0.0
         self._loading = False
         self._finished = threading.Event()
         self._cancelled = threading.Event()
@@ -69,7 +70,11 @@ class AudioPlayer:
                 if self._cancelled.is_set():
                     return
                 sd.play(data, sample_rate, blocking=False)
-                self.started_at = time.monotonic()
+                try:
+                    self.output_latency_seconds = max(0., float(sd.get_stream().latency))
+                except (AttributeError, TypeError, ValueError):
+                    self.output_latency_seconds = 0.
+                self.started_at = time.monotonic() + self.output_latency_seconds
                 self._loading = False
             sd.wait()
         except Exception as exc:

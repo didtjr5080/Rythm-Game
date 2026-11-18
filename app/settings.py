@@ -9,7 +9,7 @@ DEFAULT_SETTINGS = {
     "resolution": "1280x720",
     "show_game_hud": True,
     "show_judgement_text": True,
-    "show_camera_debug": True,
+    "show_camera_debug": False,
     "camera_flip": True,
     "camera_enabled": True,
     "camera_index": 0,
@@ -20,6 +20,7 @@ DEFAULT_SETTINGS = {
     "emg_threshold": 12,
     "emg_release_threshold": None,
     "emg_input_mode": "serial",
+    "emg_backend": "oymotion",
     "emg_port": "auto",
     "emg_device_id": "",
     "emg_baudrate": 115200,
@@ -95,6 +96,7 @@ def load_settings() -> dict:
     settings = dict(DEFAULT_SETTINGS)
     settings.update({key: data[key] for key in DEFAULT_SETTINGS if key in data})
     for key, choices, default in (("emg_input_mode", ("serial", "mock"), "serial"),
+                                  ("emg_backend", ('oymotion', 'legacy'), 'oymotion'),
                                   ("emg_signal", ("envelope", "raw", "unfiltered"), DEFAULT_SETTINGS['emg_signal']),
                                   ("emg_baudrate", (9600, 57600, 115200), 115200)):
         if settings[key] not in choices: settings[key] = default
@@ -126,6 +128,7 @@ def save_settings(settings: dict) -> dict:
     merged = dict(DEFAULT_SETTINGS)
     merged.update({key: settings[key] for key in DEFAULT_SETTINGS if key in settings})
     for key, choices, default in (("emg_input_mode", ("serial", "mock"), "serial"),
+                                  ("emg_backend", ('oymotion', 'legacy'), 'oymotion'),
                                   ("emg_signal", ("envelope", "raw", "unfiltered"), DEFAULT_SETTINGS['emg_signal']),
                                   ("emg_baudrate", (9600, 57600, 115200), 115200)):
         if merged[key] not in choices: merged[key] = default

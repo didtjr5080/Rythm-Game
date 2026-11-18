@@ -5,7 +5,6 @@ from PyQt6.QtCore import QRectF, Qt, QTimer
 from PyQt6.QtGui import QPainter, QColor, QPen, QLinearGradient, QPainterPath
 from PyQt6.QtWidgets import QWidget
 from app.input.camera import rgb_pixmap, draw_camera_frame
-from app.input.live_video import open_live_video
 from app.ui.theme import (draw_waveform, draw_crystal_note, draw_circular_gauge,
     draw_hand_skeleton_overlay, text, finger_summary)
 
@@ -27,29 +26,26 @@ class Instrument(QWidget):
         from app.input.input_fusion import InputFusion
         from app.settings import load_settings
         settings=load_settings()
-        self.camera_source=open_live_video(self,settings,enabled=config.USE_CAMERA)
-        self.fusion=InputFusion(use_camera=config.USE_CAMERA and settings['camera_enabled'],emg_threshold=settings['emg_threshold'],camera_flip=settings['camera_flip'],hand_tracker=self.camera_source if config.USE_CAMERA and settings['camera_enabled'] else None)
-        self.capture=self.camera_source.capture
+        self.fusion=InputFusion(emg_threshold=settings['emg_threshold'], emg_session=getattr(self,'emg_session',None))
         self.live_timer=QTimer(self); self.live_timer.timeout.connect(self.refresh_live); self.live_timer.start(100)
 
     def refresh_live(self):
-        frame=self.camera_source.read()
+        frame=None
         state,_=self.fusion.read(frame)
         self.camera_pixmap=rgb_pixmap(self.fusion.latest_frame_rgb)
-        self.hand_diagnostic=f"FINGERS: {state.finger_count if state.finger_count is not None else '--'} / {state.hand_label or '--'} / {state.tracker_status or '--'}"
+        self.hand_diagnostic=f"LEAP PINCH: {state.hand_label or '--'}"
         self.finger_states=self.fusion.finger_states
         tracker=self.fusion.tracker
-        self.tracker_warning=tracker.diagnostic_summary if tracker and not tracker.backend_is_mediapipe else ''
+        self.tracker_warning=tracker.last_error or '' if tracker else ''
         self.landmarks=self.fusion.hand_landmarks_norm
         reader=self.fusion.emg_reader
         connected=hasattr(reader,'serial') and reader.serial is not None
-        self.sensor_status=self.camera_source.status+' / '+('TRACKED' if self.landmarks else 'NO HAND')
+        self.sensor_status=state.tracker_status or 'LEAP WAITING'
         self.update()
 
     def stop_live(self):
         if hasattr(self,'live_timer'): self.live_timer.stop()
         if hasattr(self,'fusion'): self.fusion.close()
-        if hasattr(self,'camera_source'): self.camera_source.release()
         self.capture=None
 
     def showEvent(self,event):
@@ -113,7 +109,7 @@ class Instrument(QWidget):
             text(p,QRectF(15,y,180,24),label,16,color,Qt.AlignmentFlag.AlignLeft)
             text(p,QRectF(220,y,65,24),count,16)
             p.fillRect(QRectF(15,y+27,270,3),QColor(255,255,255,25)); p.fillRect(QRectF(15,y+27,270*count/total,3),QColor(color))
-        text(p,QRectF(0,404,300,16),f"SCORE {m.get('score',0):,}  /  MAX COMBO {m.get('max_combo',0)}" if m else 'SELECT A SONG / CALIBRATE / PLAY',9,'#94A3B8')
+        text(p,QRectF(0,404,300,16),f"SCORE {m.get('score',0):,}  /  MAX COMBO {m.get('max_combo',0)}" if m else 'SELECT A SONG / SELECT GAME / PLAY',9,'#94A3B8')
 
     def _bio(self,p):
         text(p,QRectF(5,0,290,25),self.hand_diagnostic or ('HAND 1: ACTIVE' if self.landmarks else ('LIVE CAMERA / NO HAND' if self.camera_pixmap is not None else 'SIMULATED HAND PREVIEW')),9,'#94A3B8')
@@ -122,9 +118,6 @@ class Instrument(QWidget):
             p.save(); clip=QPainterPath(); clip.addRoundedRect(view,8,8); p.setClipPath(clip)
             image_bounds=draw_camera_frame(p,view,self.camera_pixmap)
             p.fillRect(view,QColor(8,11,18,40)); p.restore()
-        if self.landmarks or self.camera_pixmap is None:
-            draw_hand_skeleton_overlay(p,image_bounds if self.landmarks and self.camera_pixmap is not None else QRectF(30,28,240,205),self.landmarks,time.monotonic(),finger_states=self.finger_states)
-        text(p,QRectF(10,231,280,18),finger_summary(self.finger_states),9,'#94A3B8')
-        draw_circular_gauge(p,QRectF(72,250,156,146),self.threshold/580,str(self.threshold),'EMG THRESHOLD')
-        text(p,QRectF(0,235,65,22),'0',9,'#94A3B8'); text(p,QRectF(237,235,60,22),'580',9,'#94A3B8')
-        text(p,QRectF(0,397,300,23),self.sensor_status if not self.tracker_warning else 'MEDIAPIPE INACTIVE / CHECK CAMERA TEST',8,'#FB923C' if self.tracker_warning else '#6EE7B7')
+        text(p,view,'THUMB + INDEX / MIDDLE / RING / PINKY',10,'#6EE7B7')
+        draw_circular_gauge(p,QRectF(72,250,156,146),0,'3s','AUTO REST / +0.01')
+        text(p,QRectF(0,397,300,23),self.sensor_status if not self.tracker_warning else self.tracker_warning,8,'#FB923C' if self.tracker_warning else '#6EE7B7')

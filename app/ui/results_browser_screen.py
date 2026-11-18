@@ -85,7 +85,8 @@ class ResultsBrowserScreen(QWidget):
             data = self.load_result(path)
             score = data.get("score", 0)
             accuracy = float(data.get("accuracy", 0.0))
-            item = QListWidgetItem(f"{self.display_result_name(path)}\nScore {score}  |  Accuracy {accuracy:.2f}%")
+            mode = 'EMG' if data.get('input_mode') == 'emg' else 'PINCH' if data.get('input_mode') == 'pinch_hold' else 'LEGACY'
+            item = QListWidgetItem(f"[{mode}] {self.display_result_name(path)}\nScore {score}  |  Accuracy {accuracy:.2f}%")
             item.setData(Qt.ItemDataRole.UserRole, str(path))
             self.result_list.addItem(item)
         if files:
@@ -137,7 +138,8 @@ class ResultsBrowserScreen(QWidget):
         data = self.load_result(path)
         self.clear_detail()
 
-        title = QLabel(self.display_result_name(path))
+        mode = 'EMG' if data.get('input_mode') == 'emg' else 'PINCH' if data.get('input_mode') == 'pinch_hold' else 'LEGACY'
+        title = QLabel(f'[{mode}] {self.display_result_name(path)}')
         title.setObjectName("heroTitle")
         title.setWordWrap(True)
         self.detail_grid.addWidget(title, 0, 0, 1, 4)

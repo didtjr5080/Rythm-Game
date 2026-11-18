@@ -15,13 +15,11 @@ def run_self_test(output_path):
         import audio_analyzer
         import note_generator
         from PyQt6.QtWidgets import QApplication
-        from app.input.mediapipe_tracker import MediaPipeHandTracker, preload_mediapipe
-        from app.input.mediapipe_runtime import create_hands, cpp_runtime_origin, MODEL_FOLDERS
         from app.ui.theme import APP_STYLE, font_families
         from app.ui.dashboard import Instrument
         from app.ui.app_icon import apply_app_icon, ICON_PATH
         from app.audio.audio_player import AudioPlayer
-        from app.audio.note_generator_adapter import generate_notes_from_analysis
+        from app.audio.note_generator_adapter import generate_notes_from_analysis, save_notes_json
         from app import config
         from app.settings import DEFAULT_SETTINGS
         assert DEFAULT_SETTINGS['note_speed'] == config.NOTE_SPEED
@@ -33,84 +31,22 @@ def run_self_test(output_path):
         report['checks'].append('Application icon resource and Qt window icon')
         font_families()
         app.setStyleSheet(APP_STYLE)
+        assert config.USE_CAMERA and config.USE_MEDIAPIPE
+        report['menu_camera_enabled'] = True
+        report['gameplay_camera_enabled'] = False
+        report['checks'].append('Menu MediaPipe enabled; gameplay camera disabled')
+        from app.input.mediapipe_tracker import preload_mediapipe, MediaPipeHandTracker
+        mp = preload_mediapipe()
+        assert mp is not None, 'MediaPipe import failed'
         tracker = MediaPipeHandTracker()
         try:
-            assert tracker.available, tracker.last_error
-            report['model_path_ascii'] = str(tracker.model_root).isascii()
-            report['cpp_runtime'] = cpp_runtime_origin()
-            if getattr(sys, 'frozen', False) and sys.platform=='win32':
-                assert report['cpp_runtime'] not in ('external-system-runtime','not-loaded')
-            assert not tracker.track(np.zeros((240,320,3),dtype=np.uint8))['hand_visible']
+            assert tracker.backend_is_mediapipe, tracker.diagnostic_summary
+            tracker.track(np.zeros((240,320,3),dtype=np.uint8))
+            assert tracker.backend_is_mediapipe, tracker.diagnostic_summary
+            report['mediapipe_version'] = mp.__version__
         finally:
             tracker.close()
-        report['checks'].append('MediaPipe Hands native model inference with Qt')
-        with tempfile.TemporaryDirectory() as folder:
-            mp=preload_mediapipe()
-            unicode_root=Path(folder)/'\ud55c\uae00 \uacbd\ub85c'
-            for name in MODEL_FOLDERS:
-                shutil.copytree(Path(mp.__file__).parent/'modules'/name,unicode_root/'mediapipe'/'modules'/name)
-            hands, model_root=create_hands(mp,resource_root=unicode_root)
-            try:
-                assert not hands.process(np.zeros((240,320,3),dtype=np.uint8)).multi_hand_landmarks
-            finally:
-                hands.close()
-            report['unicode_model_inference']=True
-        report['checks'].append('Unicode model path native inference')
-        from app.input.live_video import LiveVideoWorker
-        import time
-        class TestCamera:
-            capture = True
-            status = 'SELF-TEST CAMERA'
-            def __init__(self, settings): pass
-            def read(self): return np.zeros((240,320,3), dtype=np.uint8)
-            def release(self): self.capture = None
-        video = LiveVideoWorker(dict(camera_enabled=True,camera_flip=True), camera_factory=TestCamera)
-        try:
-            deadline = time.monotonic()+15
-            while video.read() is None:
-                assert time.monotonic()<deadline, video.diagnostic_summary
-                time.sleep(.01)
-            assert video.backend_is_mediapipe, video.diagnostic_summary
-            assert not video.track(video.read())['hand_visible']
-        finally:
-            video.close()
-            video._thread.join(5)
-        assert not video._thread.is_alive()
-        report['background_hand_tracking'] = True
-        report['checks'].append('Background native hand inference, latest-frame delivery and worker shutdown')
-        from app.input.hand_gestures import FoldGestures
-        from app.ui.hand_cursor import HandCursorController
-        from PyQt6.QtWidgets import QWidget
-        from PyQt6.QtCore import QPointF
-        gestures = FoldGestures()
-        assert gestures.feed(2,False,0.,None,-1) is None
-        assert gestures.feed(2,False,.12,None,-1)[0] == 'scroll'
-        assert gestures.scrolling and gestures.advance(2.) is None
-        assert gestures.feed(5,False,2.1,None)[0] == 'scroll'
-        assert not gestures.scrolling
-        cursor_host = QWidget()
-        cursor_host.resize(320,240)
-        cursor = HandCursorController(cursor_host)
-        cursor.attach(cursor_host, lambda: None)
-        cursor.timer.stop()
-        cursor.overlay.move_ring(QPointF(160,120), True)
-        assert not cursor.overlay.grab().isNull()
-        cursor.detach()
-        cursor_host.close()
-        report['hand_navigation'] = True
-        report['checks'].append('App-local cursor ring and two-finger wrist-tilt scroll state machine')
-        from app.input.video_session import VideoSession
-        session = VideoSession()
-        first = session.acquire(dict(camera_enabled=False), enabled=False)
-        shared = first._worker
-        first.close()
-        second = session.acquire(dict(camera_enabled=False), enabled=False)
-        assert second._worker is shared
-        second.close()
-        second.close()
-        session.shutdown()
-        report['shared_camera_session'] = True
-        report['checks'].append('Shared camera session reuse and idempotent page release')
+        report['checks'].append('Packaged MediaPipe hand graph initializes, processes a blank frame and closes without webcam access')
         for size in ((1920,1080),(1440,900)):
             widget = Instrument('performance')
             widget.resize(*size)
@@ -129,6 +65,10 @@ def run_self_test(output_path):
             assert abs(analysis['duration']-6)<.01
             notes = generate_notes_from_analysis(analysis)
             assert notes and all(0<=n['lane']<config.LANE_COUNT for n in notes)
+            assert all((a['lane'], b['lane']) != (1, 2) for a, b in zip(notes, notes[1:]))
+            chart_path = save_notes_json(notes, output_dir=folder, analysis=analysis)
+            assert RhythmGameEngine.from_json_file(chart_path, 'pinch').notes
+            assert RhythmGameEngine.from_json_file(chart_path, 'emg').notes
         report['checks'].append('Full audio decode, librosa analysis, legacy note generation')
         from app.ui.game_widget import GameWidget
         from app.ui.start_screen import StartScreen
@@ -144,14 +84,84 @@ def run_self_test(output_path):
         from app.game.rhythm_game_engine import RhythmGameEngine
         from app.game.note import Note
         from app.input.input_fusion import GameInputState
-        assert config.LANE_COUNT == 5
-        assert [MediaPipeHandTracker.finger_count_to_lane(i) for i in range(6)] == [None,0,1,2,3,4]
-        engine = RhythmGameEngine([Note(0,4,1000), Note(1,4,1050)])
-        state = GameInputState(4,0,False,True,.5,.5,5,0)
+        assert config.LANE_COUNT == 4
+        window = type('TestWindow', (), {'selected_song_path': None, 'notes_path': None})()
+        game = GameWidget(window)
+        try:
+            game.timer.stop()
+            assert game.input_fusion.emg_reader is None
+            sample_lanes = [note.lane for note in game.engine.notes]
+            assert all(pair != (1, 2) for pair in zip(sample_lanes, sample_lanes[1:]))
+            assert not game.grab().isNull()
+            report['no_song_sample_lanes'] = [lane + 1 for lane in sample_lanes]
+        finally:
+            game.close()
+        report['checks'].append('Actual no-song GameWidget sample lanes and rendering: no MIDDLE to RING')
+        from app.input.orion_leapc import SDK, OrionReader
+        from app.input.pinch_classifier import HandSample, NAMES, PinchClassifier
+        assert (SDK / 'include' / 'LeapC.h').is_file()
+        assert (SDK / 'lib' / 'x64' / 'LeapC.dll').is_file()
+        leap = OrionReader()
+        leap.close()
+        report['bundled_leap_sdk'] = str(SDK)
+        for finger, name in enumerate(NAMES):
+            model = PinchClassifier()
+            tips = [(0,0,0)] + [(100+i*30,0,0) for i in range(4)]
+            tips[finger+1] = (10,0,0)
+            sample = HandSample(1,1.,1,'RIGHT',(0,0,0),80,tips,[],[[(0,0,0),(0,1,0),(0,2,0)]]*5)
+            assert model.step(sample)[0] == 'NONE'
+            sample.t = 1.1
+            assert model.step(sample)[0] == name
+            assert model.step(None)[0] == 'LOST'
+        report['checks'].append('Bundled Orion SDK ABI and DLL loading, four pinch classes and tracking loss')
+        from app.input.leap_calibration import calculate_thresholds, save_profile, load_profiles, activate_profile
+        from app.ui.leap_calibration_dialog import LeapCalibrationDialog
+        calibration_samples = {'NONE': [[1.] * 4 for _ in range(30)]}
+        for i, name in enumerate(NAMES):
+            row = [1.] * 4
+            row[i] = .2
+            calibration_samples[name] = [list(row) for _ in range(30)]
+        thresholds = calculate_thresholds(calibration_samples)
+        assert thresholds == dict.fromkeys(NAMES, .52)
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'profiles.json'
+            save_profile('self-test', thresholds, path)
+            assert load_profiles(path)['profiles']['self-test'] == thresholds
+            activate_profile(None, path)
+            assert load_profiles(path)['active'] is None
+        class CalibrationTracker:
+            status = 'SELF-TEST LEAP'
+            def close(self): pass
+        dialog = LeapCalibrationDialog(tracker_factory=CalibrationTracker)
+        try:
+            if hasattr(dialog, 'timer'): dialog.timer.stop()
+            assert not dialog.grab().isNull()
+        finally:
+            dialog.reject()
+        report['checks'].append('Personal Leap calibration: thresholds, profiles, reset and dialog rendering')
+        for old in range(4):
+            for new in range(4):
+                if old == new: continue
+                model = PinchClassifier(dict.fromkeys(NAMES, .52))
+                tips = [(0,0,0)] + [(96,0,0)] * 4
+                tips[old+1] = (8,0,0)
+                sample = HandSample(1,1.,1,'RIGHT',(0,0,0),80,tips,[],
+                                    [[(0,0,0),(0,1,0),(0,2,0)]]*5)
+                model.step(sample)
+                sample.t = 1.1
+                assert model.step(sample)[0] == NAMES[old]
+                tips[old+1] = (48,0,0)  # Still inside calibrated release threshold.
+                tips[new+1] = (8,0,0)
+                sample.t = 1.11
+                assert model.step(sample)[0] == NAMES[new]
+        report['checks'].append('All 12 calibrated direct pinch transitions without open hand or switch delay')
+        engine = RhythmGameEngine([Note(0,3,1000), Note(1,3,1050)])
+        state = GameInputState(3,0,False,True,.5,.5,None,0)
         assert engine.update(state,990) is None
-        state.emg_activated = True
         assert engine.update(state,1000) == 'PERFECT'
-        assert engine.update(state,1050) is None
+        assert engine.update(state,1000) is None
+        assert engine.update(state,1050) == 'PERFECT'
+        assert engine.score_state.score == 2000
         from app.settings import DEFAULT_SETTINGS
         expected_signal = 'unfiltered' if Path(__file__).with_name('no_bandpass.marker').is_file() else 'envelope'
         assert DEFAULT_SETTINGS['emg_signal'] == expected_signal
@@ -159,7 +169,101 @@ def run_self_test(output_path):
         report['default_emg_signal'] = DEFAULT_SETTINGS['emg_signal']
         report['default_emg_threshold'] = DEFAULT_SETTINGS['emg_threshold']
         report['lane_count'] = config.LANE_COUNT
-        report['checks'].append('Five finger-count lanes, no hit without activation, one hit per contraction')
+        report['gameplay_emg_enabled'] = False
+        report['checks'].append('Pinch timing kernel: consecutive held notes score once each')
+        report['pinch_input_source'] = 'leap_only'
+        report['checks'].append('Leap-only pinch: no armband calibration or fusion')
+        from app.ui.game_selection_screen import GameSelectionScreen
+        from app.i18n import tr
+        assert tr('start_game', 'ko') == '게임 선택'
+        class ModeOwner:
+            selected_song_path = None
+            def show_game_widget(self, mode): pass
+            def show_start_screen(self): pass
+        selection = GameSelectionScreen(ModeOwner())
+        try:
+            selection.resize(1280, 720)
+            assert set(selection.mode_buttons) == {'pinch', 'emg'}
+            assert not selection.grab().isNull()
+        finally:
+            selection.close()
+        previous_mock = config.USE_MOCK_EMG
+        config.USE_MOCK_EMG = True
+        emg_game = None
+        try:
+            emg_game = GameWidget(ModeOwner(), mode='emg')
+            emg_game.timer.stop()
+            emg_game.rest_baseline.baseline_cents = 5000
+            assert emg_game.input_fusion.tracker is None
+            assert emg_game.input_fusion.emg_reader is not None
+            assert any(n.duration_ms for n in emg_game.engine.notes)
+            assert not emg_game.grab().isNull()
+        finally:
+            if emg_game is not None: emg_game.close()
+            config.USE_MOCK_EMG = previous_mock
+        hold_engine = RhythmGameEngine([Note(0,0,1000,duration_ms=2000)], mode='emg')
+        emg_state = GameInputState(None,20,True,False,None,None,None,0)
+        for stamp in range(1000, 3000, 100):
+            assert hold_engine.update(emg_state, stamp) is None
+            assert hold_engine.score_state.score == 0
+        assert hold_engine.update(emg_state, 3000) == 'PERFECT'
+        failed_hold = RhythmGameEngine([Note(0,0,1000,duration_ms=2000)], mode='emg')
+        failed_hold.update(emg_state, 1000)
+        emg_state.emg_activated = False
+        for stamp in range(1100, 1501, 100):
+            assert failed_hold.update(emg_state, stamp) is None
+        assert failed_hold.update(emg_state, 1601) == 'MISS'
+        report['game_modes'] = ['pinch', 'emg']
+        report['emg_hold_notes_enabled'] = True
+        report['checks'].append('Both charts saved; game selection; independent EMG input and long-note rendering')
+        report['checks'].append('EMG hold completion scores only at tail; early release fails')
+        from app.input.emg_session import EMGSession
+        from app.input.rest_baseline import RestBaseline
+        from app.settings import load_settings
+        shared = EMGSession()
+        try:
+            settings = load_settings()
+            first = shared.acquire(settings, use_mock_emg=True)
+            first.set_space_pressed(True)
+            value = first.read()
+            reader = first.reader
+            first.close()
+            second = shared.acquire(settings, use_mock_emg=True)
+            assert second.reader is reader and second.read() == value
+            second.close()
+        finally:
+            shared.shutdown()
+        baseline = RestBaseline()
+        baseline.measure([185.03], True, 0.)
+        assert not baseline.ready
+        baseline.measure([185.03], True, 3.)
+        assert baseline.baseline == 185.03 and baseline.threshold == 185.04
+        assert baseline.active(185.04, True) and not baseline.active(185.03, True)
+        assert not baseline.active(185.04, False)
+        report['emg_rest_measurement_seconds'] = 3
+        report['emg_activation_delta'] = .01
+        assisted_hold = RhythmGameEngine([Note(0,0,1000,duration_ms=2000)], mode='emg')
+        emg_state.emg_activated = True
+        assisted_hold.update(emg_state, 1000)
+        for stamp in range(1100, 1500, 100):
+            emg_state.emg_activated = False
+            assert assisted_hold.update(emg_state, stamp) is None
+        emg_state.emg_activated = True
+        for stamp in range(1500, 3000, 100):
+            assert assisted_hold.update(emg_state, stamp) is None
+        assert assisted_hold.update(emg_state, 3000) == 'PERFECT'
+        report['emg_judge_window_ms'] = config.EMG_JUDGE_WINDOW_MS
+        report['emg_hold_dropout_ms'] = config.EMG_HOLD_DROPOUT_MS
+        report['checks'].append('Shared EMG stream, 3s baseline +0.01 recognition and short-dropout hold recovery')
+        miss_game = RhythmGameEngine([Note(i,0,1000+i*1000) for i in range(12)])
+        absent = GameInputState(None,0,False,False,None,None,None,0)
+        for i in range(9):
+            assert miss_game.update(absent,1101+i*1000) == 'MISS'
+            assert not miss_game.miss_limit_reached
+        assert miss_game.update(absent,10101) == 'MISS'
+        assert miss_game.miss_limit_reached and miss_game.is_finished(10101)
+        report['pinch_consecutive_miss_limit'] = 10
+        report['checks'].append('Pinch game ends at exactly 10 consecutive misses')
         report['ok'] = True
     except Exception:
         import traceback

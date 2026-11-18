@@ -1,5 +1,43 @@
+- [EXTRACTED: 메뉴 MediaPipe 손 커서 복원 / 게임 진입 전 카메라·추론 종료](../docs/menu-hand-cursor.md) · [Mermaid](../diagrams/menu-hand-cursor.md)
+
+- [EXTRACTED: 게임 선택 이미지 카드·설명 제거](../docs/game-selection-images.md) · [Mermaid](../diagrams/game-selection-images.md)
+
+- [EXTRACTED: 핀치의 armband 연동 전부 제거 / Leap 전용 및 근전도 모드 분리](../docs/pinch-leap-only.md) · [Mermaid](../diagrams/pinch-leap-only.md)
+
+- [EXTRACTED: Leap 70% + EMG 30% 참고 점수 합산](../docs/weighted-pinch.md) · [Mermaid](../diagrams/weighted-pinch.md)
+
+- [EXTRACTED: 재부팅 후 COM4 복구 / USB 초기화·재연결 및 장치 구분 이력](../docs/armband-reconnect.md) · [Mermaid](../diagrams/armband-reconnect.md)
+
+- [EXTRACTED: Armband 단독 핀치 테스트](../docs/armband-only-test.md) · [Mermaid](../diagrams/armband-only-test.md)
+
+- [EXTRACTED: Leap + armband 다섯 자세 보정 및 핀치 일치 판정](../docs/pinch-armband-intent.md) · [Mermaid](../diagrams/pinch-armband-intent.md)
+
+- [EXTRACTED: 매 게임 시작 전 핀치 보정](../docs/pre-game-calibration.md) · [Mermaid](../diagrams/pre-game-calibration.md)
+
+- [EXTRACTED: OYMotion USB 8채널 12bit 500Hz / 전체 채널 근활성도](../docs/oymotion-emg.md) · [Mermaid](../diagrams/oymotion-emg.md)
+
 - [전시 안정화 구현과 현장 TODO](../docs/exhibition-stability.md) — v2026.11.17.2: 버튼 합성 분리와 설정 상태 영역 고정, Windows 125% 검사.
 Rythm-Game 위키
+
+- [EXTRACTED: Leap 핀치 모드 — 연속 MISS 10회 즉시 종료](../docs/leap-miss-limit.md) · [Mermaid](../diagrams/leap-miss-limit.md)
+
+- [EXTRACTED: 최신 EMG — 수동 보정 제거 / 시작 전 3초 안정 기준 +0.01 입력](../docs/emg-rest-baseline.md) · [Mermaid](../diagrams/emg-rest-baseline.md)
+
+- [EXTRACTED: EMG 보정·게임 값 일치 / 약한 수축과 입력 허용 범위 확대](../docs/emg-assisted-input.md) · [Mermaid](../diagrams/emg-assisted-input.md)
+
+- [EXTRACTED: 최신 게임 선택 — 근전도 리듬·긴 노트 / 핀치 리듬, 두 모드 채보 동시 생성](../docs/game-modes.md) · [Mermaid](../diagrams/game-modes.md)
+
+- [EXTRACTED: 최신 판정 — EMG 없이 기준선에서 핀치 유지로 득점](../docs/pinch-hold-scoring.md) · [Mermaid](../diagrams/pinch-hold-scoring.md)
+
+- [EXTRACTED: Leap Motion 개인별 핀치 보정·저장·선택](../docs/leap-personal-calibration.md) · [Mermaid](../diagrams/leap-personal-calibration.md)
+
+- [EXTRACTED: 손을 펼치지 않는 연속 핀치 즉시 전환](../docs/leap-personal-calibration.md#손을-펼치지-않는-연속-핀치-전환)
+
+- [EXTRACTED: 최신 Leap Motion 전용 손 입력 / 웹캠 제외](../docs/leap-only.md) · [Mermaid](../diagrams/leap-only.md)
+
+- [EXTRACTED: 새 채보의 MIDDLE 다음 RING 생성 금지](../docs/leap-only.md#middle-다음-ring-생성-금지)
+
+- [EXTRACTED: 노래 없는 샘플 게임 재점검·엔진 최종 레인 제약](../docs/leap-only.md#노래-없이-시작하는-샘플-게임-재점검)
 
 - v2026.11.09.4: [손 커서](../docs/hand-cursor.md)를 결과 화면·저장된 결과 목록에도 확장했습니다. 게임 중에는 비활성화하며 기존 카메라 세션을 재사용합니다.
 
@@ -112,5 +150,12 @@ Windows 실행 파일 배포
 
 - [EXTRACTED: ?? ??? ?? 5? ?? PPT ? 3? ?? + 2? ?? ??](../docs/presentation/README.md) ? [?? ?? ??](../diagrams/presentation-flow.md)
 
+- [EXTRACTED: Leap Motion 4?? ?? ??](../docs/leap-four-lane.md) ? [Mermaid](../diagrams/leap-four-lane.md)
+
+- [EXTRACTED: Leap 4?? ? EXE??? SDK??? ?? 12? ??](../docs/leap-four-lane.md#2026-11-18-?-exe-??)
+- [EXTRACTED: 공유 armband 연결·선택 음악 경로 검증 / 미확인 동기화와 실패 검사](../docs/music-session-review.md) · [Mermaid](../diagrams/music-session-review.md)
+
+
+- [EXTRACTED: ?? ?? ??? ?? ??](../docs/NEXT_TASKS.md) ? [?? ?? ??](../docs/music-session-review.md) ? [Mermaid](../diagrams/music-session-review.md)
 
 - [Next tasks and acceptance criteria](../docs/NEXT_TASKS.md) | [Local verification](../docs/music-session-review.md) | [Mermaid](../diagrams/music-session-review.md)

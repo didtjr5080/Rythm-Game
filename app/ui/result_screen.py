@@ -61,25 +61,28 @@ class ResultScreen(AuroraScreen):
 
     def _build(self):
         outer=QVBoxLayout(self); outer.setContentsMargins(50,28,50,24)
-        title=QLabel('POST-GAME REHABILITATION ANALYTICS'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(title)
+        title=QLabel('GAME OVER / 10 CONSECUTIVE MISSES' if self.metrics.get('end_reason') == '10_consecutive_misses' else 'POST-GAME REHABILITATION ANALYTICS'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(title)
         self.save_status=QLabel(f'SAVING / {self.result_path.name}'); self.save_status.setObjectName('subtitle'); outer.addWidget(self.save_status)
         self.retry_save=QPushButton('Retry Save'); self.retry_save.clicked.connect(self._retry_save); self.retry_save.hide(); outer.addWidget(self.retry_save)
         hint=QLabel('HAND CURSOR: OPEN = MOVE / FIST = CLICK / 2 FINGERS + WRIST BACK/IN = SCROLL UP/DOWN / STRAIGHT = STOP')
         hint.setObjectName('subtitle'); hint.setWordWrap(True); outer.addWidget(hint)
         row=QHBoxLayout(); row.setSpacing(30)
-        for kind,heading in (('song','SONG & BEAT DSP ANALYSIS'),('performance','NEURO-MOTOR PERFORMANCE REPORT'),('bio','LIVE BIO-CALIBRATION')):
+        for kind,heading in (('song','SONG & BEAT DSP ANALYSIS'),('performance','NEURO-MOTOR PERFORMANCE REPORT'),('bio','INPUT SUMMARY')):
             panel=GlassPanel(heading); layout=QVBoxLayout(panel); layout.setContentsMargins(16,44,16,18)
             instrument=Instrument(kind); instrument.metrics=self.metrics; instrument.threshold=load_settings()['emg_threshold']
             if kind=='song':
                 instrument.analysis=getattr(self.main_window,'song_analyses',{}).get(getattr(self.main_window,'selected_song_path',None),{})
                 path=getattr(self.main_window,'notes_path',None)
-                try: instrument.notes=RhythmGameEngine.from_json_file(path).notes if path else RhythmGameEngine.generate_sample_notes()
+                try: instrument.notes=RhythmGameEngine.from_json_file(path, mode='emg' if self.metrics.get('input_mode') == 'emg' else 'pinch').notes if path else RhythmGameEngine.generate_sample_notes('emg' if self.metrics.get('input_mode') == 'emg' else 'pinch')
                 except (ValueError,OSError,TypeError): pass
             if kind=='bio': instrument.sensor_status='SESSION COMPLETE // PREVIEW'
             layout.addWidget(instrument,1)
             if kind=='performance':
-                extra=QLabel(f"Avg EMG: {self.metrics.get('avg_emg',0):.1f}  /  Delay: {self.metrics.get('avg_input_delay_ms',0):+.1f}ms"); extra.setWordWrap(True); layout.addWidget(extra)
-                retry=QPushButton('Play Again'); retry.setObjectName('primary'); retry.clicked.connect(self.main_window.show_game_widget); layout.addWidget(retry)
+                if self.metrics.get('input_mode') == 'emg':
+                    layout.addWidget(QLabel(f"EMG MODE / HOLD: {self.metrics.get('hold_success_count',0)} / {self.metrics.get('hold_note_count',0)}"))
+                extra=QLabel(("PINCH HOLD / " if self.metrics.get("input_mode") == "pinch_hold" else f"Avg EMG: {self.metrics.get('avg_emg',0):.1f} / ") + f"Delay: {self.metrics.get('avg_input_delay_ms',0):+.1f}ms"); extra.setWordWrap(True); layout.addWidget(extra)
+                retry=QPushButton('Play Again'); retry.setObjectName('primary'); retry.clicked.connect(lambda: self.main_window.show_game_widget()); layout.addWidget(retry)
+                choose=QPushButton('게임 선택 / Select Game'); choose.clicked.connect(self.main_window.show_game_selection); layout.addWidget(choose)
             row.addWidget(panel,1)
         outer.addLayout(row,1)
         back=QPushButton('Back to Start'); back.clicked.connect(self.main_window.show_start_screen); outer.addWidget(back)

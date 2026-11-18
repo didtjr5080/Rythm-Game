@@ -25,6 +25,8 @@ class SessionLogger:
                 "lane": input_state.lane,
                 "emg_value": input_state.emg_value,
                 "emg_activated": input_state.emg_activated,
+                "leap_pinch": getattr(input_state, 'hand_label', None),
+                "pinch_input_source": getattr(input_state, 'pinch_input_source', None),
                 "note_index": note_index,
                 "judge_result": judge_result or "",
             }
@@ -45,6 +47,8 @@ class SessionLogger:
                 "lane",
                 "emg_value",
                 "emg_activated",
+                "leap_pinch",
+                "pinch_input_source",
                 "note_index",
                 "judge_result",
             ]

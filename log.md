@@ -137,7 +137,92 @@ EXTRACTED: `docs/emg-device-setup.md`, `wiki/index.md`, `diagrams/input-flow.md`
 
 2026-11-17 ? EXTRACTED: ??? ?? PPT ??? ????? 7? ?? ?? ??. ?? 180???? 120? ??, ??? ??/?? ??, ?? ?? ??? ??, ?? ???Mermaid ??. ?? ?? ?? ??. ZIP/XML/?? ?? ?? ??. TODO: ?? ??, ?? PC?? ?? ??????? 5? ???.
 
+## 2026-11-18 Leap Motion 4??
+
+EXTRACTED: ??? ???? Orion ?? ??? ABI ????? ??? ???? ??? 4???? ??. EMG ?? ??, ?? ???SDK ?? ?? ??. ??: [?? ??](docs/leap-four-lane.md), [?????](diagrams/leap-four-lane.md). SDK ?? ??, 3? ???? ?????????? ???. ?? ?? ??? ??? EXE ??? TODO.
+
+EXTRACTED: `python -m unittest docs.check_leap_input -v` 3? ??. Qt offscreen ?? ?????? ? ?? Python ??? ?? ??.
+
+## 2026-11-18 Leap 4?? EXE ??
+
+EXTRACTED: ? dist_windows_leap_4lane_2026.11.18 ??? No-Bandpass EXE ??. spec? SDK ???DLL ??, frozen SDK ?? ??, diagnostics 4?? ?? ??. EXE ?? ?? 12?? ??(ok=true, lane_count=4). ?? ??? ??. ?? ?? ??? TODO. [??](docs/leap-four-lane.md).
+## 2026-11-18 Leap Motion 전용 입력
+
+EXTRACTED: 근전도 작업 보류, 핀치 모드만 연속 MISS 10회 즉시 종료 추가. PERFECT/GOOD이면 횟수 초기화. 음악 재생 중에도 finish_game으로 종료하고 결과 원인 기록. EMG 동작 유지. 회귀 검사 49개 통과. [문서](docs/leap-miss-limit.md), [Mermaid](diagrams/leap-miss-limit.md). 실제 장치 확인 TODO.
+
+EXTRACTED: `dist_windows_leap_miss10_2026.11.18` 새 EXE 생성, 자체 검사 15항목 통과(`ok=true`, `pinch_consecutive_miss_limit=10`). 기존 설정·핀치 보정 2개 파일 보존. 실행 안내문·검사 보고서 포함, 이전 빌드 유지.
+
+EXTRACTED: 수동 EMG 보정 UI를 제거하고 매 근전도 게임 시작 전 3초 신선한 안정 패킷 평균을 측정한다. 측정 완료 전 음악/노트/점수 정지. 소수 둘째 자리 정수 비교로 안정 기준+0.01부터 활성, 기존 ON/OFF·감소형·재무장 bool 무시. 신호 손실 시 3초 재측정, 핀치 개인별 보정 유지. 회귀 검사 45개 통과. [문서](docs/emg-rest-baseline.md), [Mermaid](diagrams/emg-rest-baseline.md). 실제 센서 확인 TODO.
+
+EXTRACTED: `dist_windows_emg_rest_001_2026.11.18` 최종 EXE 빌드. 메인·결과 화면의 과거 EMG 임계값/보정 표시 제외. 최종 EXE 자체 검사 14항목 통과(`ok=true`, 3초·+0.01). 이전 설정·핀치 보정 2개 파일 보존. 안내문·검사 보고서 포함.
+
+EXTRACTED: EMG 보정/게임 값 차이 재점검. 화면별 포트 재연결·필터 재초기화 구조를 공유 EMGSession으로 변경하고 성공한 자동 보정의 소스·ON/OFF를 즉시 저장한다. 보정값 표시는 소수 두 자리로 통일. 근전도 판정 ±350ms/PERFECT 150ms, 짧은 활성 저하 400ms 회복 허용, 새 보정 ON 35%/OFF 10%. 센서 손실·오래된 데이터 성공 차단 유지. 모의 시리얼 보정→게임의 동일 리더·값·임계값 검사 포함 40개 통과. 실제 장치·사용자 검증 TODO. [문서](docs/emg-assisted-input.md), [Mermaid](diagrams/emg-assisted-input.md).
+
+EXTRACTED: `dist_windows_emg_assisted_2026.11.18` 새 EXE 빌드. 이전 설정·핀치 보정 2개 파일 복사, 이전 폴더 유지. EXE 자체 검사 14항목 통과(`ok=true`, 박자 350ms·활성 저하 400ms). 안내문과 검사 보고서 포함. 기존 EMG 임계값은 보존하므로 약한 수축용 비율 적용은 자동 보정 재실행 필요.
+
+EXTRACTED: 사용자 요청으로 게임 시작을 게임 선택으로 바꾸고 EMG 1레인/핀치 4레인 분리. 한 번 분석·생성하여 notes와 emg_notes를 함께 저장하는 v2 채보 추가. EMG 짧은 노트는 새 수축, 긴 노트는 꼬리까지 유지 후 한 번 득점하며 중도 해제/250ms 입력 공백은 MISS. 긴 노트 몸통·꼬리·유지 시간 표시와 결과 모드·긴 노트 성공 수 기록. 기존 EMG 처리 코드는 유지. 이전 채보 로딩·모드별 샘플·장치 독립성 포함 소스 검사 30개 통과. [문서](docs/game-modes.md), [Mermaid](diagrams/game-modes.md). 실제 장치 플레이 TODO.
+
+EXTRACTED: `dist_windows_dual_mode_2026.11.18` 새 EXE 생성. 이전 설정·개인별 보정 2개 파일 복사, 이전 배포 폴더 유지. EXE 자체 검사 13항목 통과(`ok=true`, 두 모드 채보 저장·로딩 및 긴 노트 판정 포함). 실행 폴더에 안내문·검사 보고서 포함.
+
+EXTRACTED: 요청에 따라 EMG 판정 조건·수축 시작 감지를 제외하고 기준선 도착 시 해당 핀치를 유지하면 득점하도록 변경. 게임의 EMG 리더 생성을 중단하고 키보드로 가짜 손 상태를 만드는 경로 제외. 같은 핀치 유지로 연속 노트 각각 득점, 도착 전 조기 득점 방지. 게임 HUD·새 결과 모드 표시 변경, EMG 테스트·보정은 유지. 소스 검사 21개 통과. [문서](docs/pinch-hold-scoring.md), [Mermaid](diagrams/pinch-hold-scoring.md). 실제 장치 플레이 TODO.
+
+EXTRACTED: `dist_windows_leap_pinch_hold_2026.11.18` 새 EXE 생성. 기존 개인별 핀치 보정 파일 검증 후 복사. 자체 검사 11항목 통과(`ok=true`, `gameplay_emg_enabled=false`). 실행 폴더에 안내문·보고서 포함. 이전 빌드 유지.
+
+EXTRACTED: 이전 핀치 해제 범위가 새 후보를 덮어써 연속 전환을 막는 조건을 재현했다. 명확한 새 후보는 즉시 전환하고 모호한 후보에만 기존 유지 조건을 적용하도록 수정. 최초 진입·해제 안정화 유지. 36방향/보정 조합 포함 소스 검사 15개 통과. [상세](docs/leap-personal-calibration.md#손을-펼치지-않는-연속-핀치-전환). 실제 사용자 손 전환 검증 TODO.
+
+EXTRACTED: `dist_windows_leap_direct_pinch_2026.11.18` 새 EXE 생성. 기존 개인별 보정 파일 유효성 검증 후 복사. EXE 자체 검사 11항목 통과(`ok=true`), 보정 12방향 즉시 전환 포함. 이전 실행 폴더 유지.
+
+EXTRACTED: 개인별 Leap 핀치 보정 기능 추가. 설정에서 열린 손+네 핀치를 1초 준비/3초 측정하고 거리 중앙값으로 네 임계값을 계산한다. 로컬 이름별 프로필 저장/선택/기본값 복귀와 다음 게임 적용. 원시 좌표 미저장. 부족 측정·분리 부족·잘못된 보정값 저장 방지. 소스 회귀 검사 12개 통과. [문서](docs/leap-personal-calibration.md), [Mermaid](diagrams/leap-personal-calibration.md). 실제 사용자 손 검증 TODO.
+
+EXTRACTED: `dist_windows_leap_personal_calibration_2026.11.18` 새 EXE 빌드 완료. 자체 검사 10항목 통과(`ok=true`). SDK·안내문·검사 보고서를 실행 폴더에 포함. 이전 빌드 폴더 유지.
+
+EXTRACTED: 노래 없는 게임의 레인 전환 재점검. 구 EXE와 직전 수정 EXE의 내장 샘플 배열을 비교했다. 실행 중 EXE 경로는 미확인. 모든 채보가 엔진 진입 시 MIDDLE → RING 제약을 거치도록 보강. 실제 무곡 GameWidget 순서·렌더링 검사 추가, 소스 검사 8개 통과. 기존 채보 파일은 덮어쓰지 않는다. [상세](docs/leap-only.md#노래-없이-시작하는-샘플-게임-재점검).
+
+EXTRACTED: `dist_windows_leap_sample_fix_2026.11.18` 새 EXE 생성. EXE 자체 검사 9항목 통과. 무곡 게임 실제 레인 `1,2,1,4,3,2,1,2,4,3,1,4` 확인. 보고서 `release/self-test-leap-sample-fix-2026.11.18.json`.
+
+EXTRACTED: 추가 요청으로 새 채보의 MIDDLE → RING 전환을 금지했다. 노트 간격 정리 후 해당 RING을 INDEX로 변경하며 시각·개수 유지. 샘플/대체 채보도 적용. 기존 채보는 재생성 필요. 1,024개 레인 조합을 포함한 테스트 7개 통과. [상세](docs/leap-only.md#middle-다음-ring-생성-금지).
+
+EXTRACTED: `dist_windows_leap_only_no_middle_ring_2026.11.18`에 제약 반영 EXE 생성. 자체 검사 8항목 통과(`ok=true`). 이전 EXE 유지. 실행 폴더에 안내문과 검사 결과 포함.
+
+EXTRACTED: `dist_windows_leap_only_2026.11.18`에 새 EXE 생성 완료. 소스 검사 4개 및 EXE 자체 검사 8항목 통과(`ok=true`, `camera_input_enabled=false`, `lane_count=4`). 실행 폴더에 SDK·안내문·검사 보고서 포함. 이전 빌드 유지.
+
+EXTRACTED: 사용자 요청으로 웹캠·MediaPipe 입력을 비활성화했다. 메인/보정/게임은 Leap 입력을 사용하고 카메라 설정·미리보기·메뉴 커서 연결을 제외했다. 게임은 핀치 4레인과 기존 EMG 판정을 유지한다. 빌드에서 MediaPipe 패키지·모델 제외. [문서](docs/leap-only.md), [Mermaid](diagrams/leap-only.md). 실제 장치 플레이 확인 TODO.
+
+
+EXTRACTED: 2026-11-18 OYMotion 충전 후 COM4 실장치 수신 재개. 연결 후 약 20초간 9,952개 8채널 프레임, 잘못된 패킷 0개. 기존 구현의 SDK 설정·전체 채널 AC RMS·시작 전 3초 안정 기준+0.01 흐름을 [문서](docs/oymotion-emg.md)와 [Mermaid](diagrams/oymotion-emg.md)에 기록하고 wiki 색인을 갱신. 관련 소스 검사 56개 통과. AMBIGUOUS: 착용 후 수축 구분과 장시간 연결 검증은 TODO.
+
+EXTRACTED: `dist_windows_oymotion_2026.11.18`에 새 EXE 빌드 완료. 기존 핀치 보정·설정 복사, 새 폴더의 EMG 장치는 OYMotion/COM4로 지정. SDK 두 DLL 로딩·ABI 크기·해시 검사 통과, EXE 자체 검사 15항목 통과. 각 보고서를 배포 폴더 및 `release/`에 저장. 이번 재개 작업에서는 기존 게임 동작을 더 수정하지 않았다.
+EXTRACTED: 2026-11-18 사용자 요청으로 핀치 보정을 설정에서 매 게임 시작 전으로 이동. 기존 프로필·기본값 사용 우회를 제거하고 새 다섯 동작 측정·검증·저장 후에만 시작. 취소 시 미시작, 재시도에도 보정. EMG 시작 전 3초 안정값 측정 유지. [문서](docs/pre-game-calibration.md), [도식](diagrams/pre-game-calibration.md), wiki 색인 및 회귀 검사 추가.
+EXTRACTED: 시작 전 보정 빌드 `dist_windows_pre_game_calibration_2026.11.18` 완료. 관련 소스 검사 59개, EXE 자체 검사 15항목 통과. 기존 설정·프로필 복사 및 이전 빌드 보존. 실제 Leap 측정에서 보정 완료 후 게임 전환은 현장 검증 TODO.
+EXTRACTED: 2026-11-18 요청에 따라 열린 손·네 핀치의 Leap/armband 동시 보정과 두 센서 일치 판정을 추가. OYMotion 새 8채널 RMS 특징을 수집하고 게임마다 메모리 분류 모델 생성. 불확실·불일치·장치 변경·신호 소실 시 레인 미인정. HUD 및 세션 기록에 의도·일치 표시. 관련 검사 66개 통과. [문서](docs/pinch-armband-intent.md), [도식](diagrams/pinch-armband-intent.md). 실제 착용 분류 성능은 미검증.
+EXTRACTED: `dist_windows_pinch_armband_2026.11.18` 새 EXE 빌드 완료. 소스 검사 최종 67개 및 EXE 자체 검사 16항목 통과(`pinch_requires_sensor_agreement=true`). SDK DLL 해시 일치, 기존 설정·Leap 보정 프로필 복사 확인. 이전 빌드 보존. 실제 착용자의 다섯 자세 분리·동시 보정·게임 판정은 TODO.
+EXTRACTED: 2026-11-18 테스트용 armband 단독 핀치 선택 추가. Leap 없이 다섯 자세 보정 후 분류가 직접 4레인 선택. 일반 두 센서 모드와 분리하고 재시도 선택 유지. 세션·결과에 입력 출처 기록. 관련 검사 71개 통과. [문서](docs/armband-only-test.md), [도식](diagrams/armband-only-test.md), wiki·README 갱신. 실제 착용 인식 검증은 TODO.
+EXTRACTED: armband 단독 테스트 빌드 `dist_windows_armband_only_2026.11.18` 완료. 소스 검사 71개 및 EXE 자체 검사 17항목 통과(`armband_only_test_enabled=true`). SDK DLL 해시와 기존 설정·프로필 복사 확인, 이전 빌드 보존. 실제 착용 테스트는 TODO.
+EXTRACTED: 2026-11-18 사용자 USB 초기화 code 1 오류 조사. 연결된 COM 포트 없음, 과거 FTDI COM4는 Disconnected. 드라이버 등록 존재. Windows 장치 재검색은 Access is denied로 실패. 실패 reader가 같은 설정으로 재사용되는 오류를 수정하고 COM 미감지 안내를 추가. 관련 검사 74개 통과. [문서](docs/armband-reconnect.md), [도식](diagrams/armband-reconnect.md). 실제 동글 인식·수신 복구는 미확인.
+EXTRACTED: 재연결 수정 빌드 `dist_windows_armband_reconnect_2026.11.18` 완료. 소스 74개 및 EXE 자체 검사 17항목 통과. 기존 설정·보정 복사 후 새 폴더 포트만 Auto로 지정. 최종 현재 COM 목록은 비어 있어 실수신 복구는 미확인.
+EXTRACTED: 후속 사용자 화면의 COM 미감지 재점검. FTDI USB Serial Converter는 IsPresent=FALSE/Disconnected, 기존 상위 Generic USB Hub는 Started. 현재 COM 및 문제 장치 목록 없음. 동글이 현재 열거되지 않는 상태임을 확인했으며 물리 원인은 미확정. 본체 USB에 직접 연결한 상태로 재확인 요청. 게임 코드·EXE는 변경하지 않고 기존 연결 진단 문서만 보강.
+INFERRED: 사용자 테스트에서 USB 동글 본체 직결은 정상, 허브 연결은 실패한다고 보고. 기존 USB 상태 관찰과 합쳐 허브 연결 경로 문제로 범위를 좁힘. 본체 직결 후 Refresh EMG Devices → Connect / Test EMG 안내. 구체적 허브 원인은 미확정이며 추가 코드·EXE 변경 없음. 진단 문서와 wiki 색인 보강.
+EXTRACTED: 본체 직결도 실패한 후 게임 종료를 확인하고 관리자 RunAs 장치 재검색 수행(종료 코드 0). COM 없음·FTDI Disconnected 지속. 현재 USB Composite Device는 BusReportedDeviceDesc=Leap Motion Controller, VID_F182/PID_0003으로 확인되어 armband FTDI 동글과 구분. AMBIGUOUS: 허브만의 문제라는 이전 추론은 미확정으로 정정. 다른 PC 검사는 불가. 문서·wiki·도식 갱신, 코드·EXE 변경 없음.
+EXTRACTED: 사용자 HID 목록의 Bluetooth GATT HID 부모를 직접 조회하여 SPA-NMA1PM으로 확인. 기존 gForcePro+와 별도 장치. 현재 전체 Bluetooth 클래스에서도 gForcePro+ 항목 없음, COM 목록 없음. 진단 문서와 wiki 색인 보강. 코드·EXE 변경 없음.
+EXTRACTED: 사용자 재부팅 후 COM4를 직접 조회하여 현재 인식 복구 확인. 보정 화면은 8채널 수신 및 다섯 동작 최소 샘플 수를 충족하나 NONE 인정률 80% 검사에서 실패. 연결 장애와 보정 패턴 분리 오류를 구분하여 문서·wiki에 기록. AMBIGUOUS: 원본 벡터가 없어 겹치는 자세와 원인 미확정. 열린 손 재측정 안내, 코드·임계값·EXE 변경 없음.
+EXTRACTED: 2026-11-18 사용자 요청으로 일반 핀치를 Leap 70% + EMG 30% 참고 점수 합산으로 변경. EMG 중첩 패턴의 일반 모드 시작 차단 제거, 단독 테스트 엄격 검사 유지. NONE/불확실/신호 소실 입력 보류. L/E/F 점수 HUD와 세션 기록 추가. 관련 검사 81개 통과. [문서](docs/weighted-pinch.md), [도식](diagrams/weighted-pinch.md). 실제 착용 성능은 미검증.
+EXTRACTED: 가중 핀치 빌드 `dist_windows_weighted_pinch_2026.11.18` 완료. 소스 검사 81개 및 EXE 자체 검사 17항목 통과. 보고서에서 가중치 0.7/0.3 및 일치 필수 해제 확인. 설정·Leap 프로필 복사, SDK DLL 해시 일치, 이전 빌드 보존. 실제 착용자의 일반 모드 재보정·판정 확인은 TODO.
+EXTRACTED: 2026-11-18 요청에 따라 핀치의 armband 연동 전부 제거. Leap 전용 매 게임 보정·입력 복원, 단독 armband 핀치 옵션과 가중 점수 HUD·모듈 제거. 핀치 진입 시 이전 메뉴 EMG 스트림 종료. 별도 근전도 게임·OYMotion 입력 유지. 관련 검사 65개 통과. [문서](docs/pinch-leap-only.md), [도식](diagrams/pinch-leap-only.md), wiki·README 갱신. 실제 Leap 플레이는 TODO.
+EXTRACTED: Leap 전용 핀치 새 빌드 `dist_windows_pinch_leap_only_2026.11.18` 완료. 소스 검사 65개 및 EXE 자체 검사 16항목 통과. PYZ에서 제거한 의도 분류·가중 합산 모듈 부재와 별도 EMG reader 유지 확인. 설정·Leap 프로필 복사, 기존 배포 보존. 실제 Leap 보정·플레이는 TODO.
+EXTRACTED: 2026-11-18 사용자 확인에 따라 암밴드 팔→근전도 게임, 핀치 손→핀치 게임 이미지 배치. 게임 선택 설명·곡 정보·하단 안내 제거, 이미지와 이름을 그리는 전체 클릭 카드 적용. 원본 PNG 두 개를 app/assets/game_modes에 복사. 1280/800 너비 렌더링 및 버튼 연결 확인, 기존 검사 65개 통과. [문서·미리보기](docs/game-selection-images.md), [도식](diagrams/game-selection-images.md), wiki·README 갱신. 입력·게임 규칙 변경 없음.
+EXTRACTED: 이미지 선택 화면 빌드 `dist_windows_image_selection_2026.11.18` 완료. 소스 회귀 검사 65개 및 EXE 자체 검사 16항목 통과. 두 PNG 배포·해시 일치 및 기존 설정·Leap 프로필 복사 확인. 이전 배포 보존. 실제 센서 플레이는 이번 UI 변경 검증 범위에서 수행하지 않았다.
+EXTRACTED: 2026-11-18 메뉴 전용 MediaPipe 손 커서 복원. 메인·게임 선택·설정·결과·저장 결과에서 공유 카메라, 게임 진입은 커서 해제 및 모든 작업자 종료 후에만 진행. 결과·보정 취소 시 메뉴 카메라 복구. 설정 카메라 컨트롤·상태 노출, MediaPipe 모델 패키징 복원. 관련 검사 70개 및 소스 모델 초기화·검은 프레임 추론 통과. AMBIGUOUS: 실제 Camera 0/1은 열기 실패하여 물리 손 커서 검증 미완. [문서](docs/menu-hand-cursor.md), [도식](diagrams/menu-hand-cursor.md).
+EXTRACTED: 메뉴 손 커서 빌드 dist_windows_menu_hand_cursor_2026.11.18 완료. 소스 검사 70개 및 EXE 자체 검사 17항목 통과, 필수 MediaPipe 모델 다섯 파일 포함 확인. 배포 EXE에서도 실제 Hands 그래프 초기화·빈 프레임 추론·close 통과. 기존 설정·Leap 프로필 복사 후 새 배포 camera_enabled=True 지정, 이전 배포 보존. 실제 Camera 0/1은 열기 실패하여 손 조작 검증은 TODO.
+## 2026-11-18 연결·음악 작업 트리 검증
+
+EXTRACTED: docs/music-session-review.md 및 diagrams/music-session-review.md를 추가하고 wiki/index.md에 연결했다. 핀치 문서의 이전 연결 종료 설명에 이력 표시를 추가하고 흐름도를 현재 공유 연결 유지 동작에 맞췄다. 문서화 전용 지침에 따라 이번 이어서 작업에서 게임 소스 추가 수정이나 EXE 생성은 하지 않았다.
+
+EXTRACTED: 기존 테스트 75개 통과. WorkOrder/verify_full_song.py는 테스트 객체 mode 누락으로 실패했다. 실제 저장 MP3 분석은 208.013초, BPM 126.048, 노트 208개였다. 원본 디코딩 길이 213.773초와 차이가 있어 전처리와 원본 타임라인 동기화 확인을 TODO로 남겼다. 물리 장치 장기 연결·전체 곡 청감 검증·새 배포는 미완료다.
+
 
 ## 2026-11-18 Next tasks and Git documentation update
 
 EXTRACTED: Added docs/NEXT_TASKS.md with priorities and acceptance criteria for audio timelines, the full-song test fixture, real armband persistence, menu camera checks, and a verified EXE build. Included docs/music-session-review.md and diagrams/music-session-review.md as observations of the local working tree, not a release guarantee. This commit excludes game source and other pending edits. TODO: implementation and build require a scope permitting code changes under AGENTS.md. View diagrams with Mermaid Markdown preview; run Graphify manually with graphify .
+## 2026-11-18 전체 구현 Git 공유
+
+EXTRACTED: 사용자가 armband·Leap을 포함한 전체 구현 푸시를 명시하여 기존 문서 전용 제한의 이번 작업 예외로 적용했다. app 소스, OYMotion SDK DLL·NOTICE, 게임 선택 이미지, PyInstaller spec, 검사와 관련 문서를 공유 범위에 포함한다. 개인 설정·보정 프로필·사용자 곡·실행 로그·EXE 산출물은 포함하지 않는다. 소스 검사 75개를 재실행하여 통과했다. 새 EXE 빌드와 실제 장치 검증은 수행하지 않았다. 음악 시간축 차이와 전체 곡 검사 fixture 오류는 docs/NEXT_TASKS.md의 미해결 과제로 유지한다.

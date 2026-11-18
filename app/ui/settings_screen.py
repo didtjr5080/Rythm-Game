@@ -22,6 +22,8 @@ from app import config
 from app.input.live_video import open_live_video
 from app.input.emg_devices import discover_emg_devices
 from app.input.emg_reader import SerialEMGReader
+from app.input.emg_session import EMGLease
+from app.input.emg_factory import create_emg_reader
 from app.input.emg_processing import calibration_thresholds
 from statistics import median
 from app.input.mock_emg_reader import MockEMGReader
@@ -42,7 +44,7 @@ class SettingsScreen(QWidget):
         self.judgement_checkbox = QCheckBox(tr("show_judgement_text", self.language))
         self.camera_debug_checkbox = QCheckBox(tr("show_camera_debug", self.language))
         self.camera_flip_checkbox = QCheckBox(tr("flip_camera", self.language))
-        self.camera_enabled_checkbox = QCheckBox('Enable real webcam')
+        self.camera_enabled_checkbox = QCheckBox('메뉴 손 커서 사용 / 웹캠 (저장 후 적용)')
         self.camera_enabled_checkbox.setChecked(self.settings['camera_enabled'])
         self.camera_index_combo = QComboBox()
         for index in range(10): self.camera_index_combo.addItem(f'Camera {index}',index)
@@ -63,6 +65,8 @@ class SettingsScreen(QWidget):
         self.camera_status.setWordWrap(False)
         self.camera_status.setFixedHeight(self.camera_status.fontMetrics().lineSpacing()*3+12)
         self.camera_status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self.menu_camera_timer = QTimer(self)
+        self.menu_camera_timer.timeout.connect(self.refresh_menu_camera_status)
         self.language_combo = QComboBox()
         self.window_mode_combo = QComboBox()
         self.resolution_combo = QComboBox()
@@ -81,6 +85,10 @@ class SettingsScreen(QWidget):
         self.emg_mode_combo.addItem('Real EMG sensor', 'serial')
         self.emg_mode_combo.addItem('Demo / SPACE input', 'mock')
         self.emg_mode_combo.setCurrentIndex(max(0,self.emg_mode_combo.findData(self.settings['emg_input_mode'])))
+        self.emg_backend_combo = QComboBox()
+        self.emg_backend_combo.addItem('OYMotion USB dongle / 8CH 12bit 500Hz', 'oymotion')
+        self.emg_backend_combo.addItem('Legacy Arduino / single-channel serial', 'legacy')
+        self.emg_backend_combo.setCurrentIndex(max(0,self.emg_backend_combo.findData(self.settings['emg_backend'])))
         self.emg_port_combo = QComboBox()
         self.emg_baud_combo = QComboBox()
         for baud in (9600,57600,115200): self.emg_baud_combo.addItem(str(baud),baud)
@@ -104,9 +112,10 @@ class SettingsScreen(QWidget):
         self.device_timer.timeout.connect(self.refresh_emg_devices)
         self.refresh_emg_devices()
         self.device_timer.start(2000)
-        for combo in (self.emg_mode_combo,self.emg_port_combo,self.emg_baud_combo,self.emg_signal_combo):
+        for combo in (self.emg_backend_combo,self.emg_mode_combo,self.emg_port_combo,self.emg_baud_combo,self.emg_signal_combo):
             combo.currentIndexChanged.connect(self.emg_source_changed)
         self._build()
+        self.update_backend_controls()
 
     def _slider(self, minimum: int, maximum: int, value: int):
         slider = QSlider(Qt.Orientation.Horizontal)
@@ -146,8 +155,8 @@ class SettingsScreen(QWidget):
         self.camera_flip_checkbox.setChecked(self.settings["camera_flip"])
         layout.addWidget(self.hud_checkbox, 0, 0)
         layout.addWidget(self.judgement_checkbox, 0, 1)
-        layout.addWidget(self.camera_debug_checkbox, 1, 0)
-        layout.addWidget(self.camera_flip_checkbox, 1, 1)
+        self.camera_debug_checkbox.hide()
+        self.camera_flip_checkbox.hide()
 
         self._setup_combo_boxes()
         layout.addWidget(QLabel(tr("language", self.language)), 2, 0)
@@ -160,13 +169,18 @@ class SettingsScreen(QWidget):
         self._add_slider_row(layout, 5, tr("music_volume", self.language), self.volume_slider, self.volume_value, "%")
         self._add_slider_row(layout, 6, tr("note_speed", self.language), self.note_speed_slider, self.note_speed_value, "")
         self._add_slider_row(layout, 7, tr("judgement_line", self.language), self.judge_line_slider, self.judge_line_value, "%")
-        self._add_slider_row(layout, 8, tr("emg_threshold", self.language), self.emg_threshold_slider, self.emg_threshold_value, "")
-        layout.addWidget(self.camera_enabled_checkbox,9,0)
-        layout.addWidget(QLabel('Webcam device'),10,0); layout.addWidget(self.camera_index_combo,10,1)
-        layout.addWidget(QLabel('Webcam capture size'),11,0); layout.addWidget(self.camera_resolution_combo,11,1)
-        test = QPushButton('Connect / Test Camera'); test.clicked.connect(self.start_camera_preview)
-        layout.addWidget(test,12,0); layout.addWidget(self.camera_status,12,1,1,2)
-        layout.addWidget(self.camera_preview,13,0,1,3)
+        self.emg_threshold_slider.hide()
+        self.emg_threshold_value.hide()
+        self.camera_preview.hide()
+        layout.addWidget(self.camera_enabled_checkbox,8,0,1,3)
+        layout.addWidget(QLabel('메뉴 웹캠 / 해상도'),9,0)
+        layout.addWidget(self.camera_index_combo,9,1)
+        layout.addWidget(self.camera_resolution_combo,9,2)
+        layout.addWidget(self.camera_flip_checkbox,10,0)
+        layout.addWidget(self.camera_status,10,1,1,2)
+        layout.addWidget(QLabel('게임 중 웹캠 OFF / 핀치: Leap 전용 / 근전도: armband 전용'),11,0,1,3)
+        layout.addWidget(QLabel('Leap Motion 핀치 보정은 매 게임 시작 전에 진행합니다.'),12,0,1,3)
+        layout.addWidget(QLabel('EMG hardware'),13,0); layout.addWidget(self.emg_backend_combo,13,1,1,2)
         layout.addWidget(QLabel('EMG input mode'),14,0); layout.addWidget(self.emg_mode_combo,14,1)
         layout.addWidget(QLabel('EMG device / COM port'),15,0); layout.addWidget(self.emg_port_combo,15,1)
         refresh=QPushButton('Refresh EMG Devices'); refresh.clicked.connect(self.refresh_emg_devices); layout.addWidget(refresh,15,2)
@@ -174,15 +188,7 @@ class SettingsScreen(QWidget):
         layout.addWidget(QLabel('EMG signal type'),17,0); layout.addWidget(self.emg_signal_combo,17,1)
         connect=QPushButton('Connect / Test EMG'); connect.clicked.connect(self.start_emg_test); layout.addWidget(connect,18,0)
         layout.addWidget(self.emg_status,18,1,1,2)
-        rest = QPushButton('1. 안정 상태 측정 (힘 빼기)')
-        rest.clicked.connect(lambda: self.start_emg_calibration('rest'))
-        active = QPushButton('2. 3회 반복 수축 / 임계값 자동 보정')
-        active.clicked.connect(lambda: self.start_emg_calibration('active'))
-        layout.addWidget(rest,19,0)
-        layout.addWidget(active,19,1,1,2)
-        self.emg_calibration_status = QLabel('안정 측정 약 4초 → 안내에 따라 힘빼기/수축 3회 약 12초 → Save로 저장')
-        self.emg_calibration_status.setWordWrap(True)
-        layout.addWidget(self.emg_calibration_status,20,0,1,3)
+        layout.addWidget(QLabel('EMG: 3 seconds of rest before each game / baseline + 0.01'),19,0,1,3)
         outer.addWidget(panel)
 
         row = QHBoxLayout()
@@ -259,9 +265,12 @@ class SettingsScreen(QWidget):
         if port!='auto':
             device=next((d for d in self.emg_devices if d['port']==port),None)
             identity=device['identity'] if device else (self.settings['emg_device_id'] if port==self.settings['emg_port'] else '')
-        elif isinstance(self.emg_test_reader,SerialEMGReader) and self.emg_test_reader.verified:
+        elif (isinstance(self.emg_test_reader,SerialEMGReader) or isinstance(self.emg_test_reader,EMGLease) and self.emg_test_reader.is_serial) and self.emg_test_reader.verified:
             identity=self.emg_test_reader.connected_identity
-        return dict(emg_input_mode=self.emg_mode_combo.currentData(), emg_port=port,
+        if self.emg_backend_combo.currentData() == 'oymotion':
+            identity = (self.emg_test_reader.connected_identity if self.emg_test_reader is not None
+                        and getattr(self.emg_test_reader, 'verified', False) else '')
+        return dict(emg_backend=self.emg_backend_combo.currentData(), emg_input_mode=self.emg_mode_combo.currentData(), emg_port=port,
                     emg_device_id=identity, emg_baudrate=self.emg_baud_combo.currentData(),
                     emg_signal=self.emg_signal_combo.currentData())
 
@@ -269,12 +278,14 @@ class SettingsScreen(QWidget):
         self.stop_emg_test()
         settings=self.emg_settings()
         threshold=self.emg_threshold_slider.value()
-        if settings['emg_input_mode']=='mock':
+        session = getattr(self.main_window, 'emg_session', None)
+        if session is not None:
+            self.emg_test_reader=session.acquire(dict(self.settings, **settings,
+                emg_threshold=threshold, emg_release_threshold=self.emg_release_threshold))
+        elif settings['emg_input_mode']=='mock':
             self.emg_test_reader=MockEMGReader(threshold)
         else:
-            self.emg_test_reader=SerialEMGReader(port=settings['emg_port'],baudrate=settings['emg_baudrate'],
-                threshold=threshold,device_id=settings['emg_device_id'],signal=settings['emg_signal'],
-                release_threshold=self.emg_release_threshold)
+            self.emg_test_reader=create_emg_reader(dict(self.settings, **settings), threshold=threshold)
         self.emg_timer.start(33)
         self.refresh_emg_test()
 
@@ -284,102 +295,23 @@ class SettingsScreen(QWidget):
         reader.threshold=self.emg_threshold_slider.value()
         value,activated=reader.read()
         status=getattr(reader,'status','MOCK EMG / SPACE')
-        self.emg_status.setText(f'{status} / VALUE: {value:.2f} / ACTIVE: {activated} / '+
-            f"RAW: {getattr(reader,'raw_value',value):.0f} / ACTIVITY: {value:.2f} / ON: {reader.threshold:.3f} / OFF: {getattr(reader,'release_level',reader.threshold*.6):.3f}")
-        if getattr(reader, 'bypass_available', False):
-            self.emg_status.setText(self.emg_status.text()+f' / BP RMS: {reader.envelope_value:.0f} / NO BP RMS: {reader.unfiltered_value:.0f}')
-        self.emg_status.setText(self.emg_status.text()+(' / DIR: DOWN' if getattr(reader,'falling_activation',False) else ' / DIR: UP'))
-        self.collect_emg_calibration(reader)
+        self.emg_status.setText(f'{status} / ACTIVITY: {value:.2f} / GAME: 3s rest, then +0.01')
+        channels = getattr(reader, 'channel_rms', None)
+        if channels is not None:
+            self.emg_status.setText(self.emg_status.text()+'\nCH1-8 RMS: '+', '.join(f'{v:.2f}' for v in channels))
 
-    def start_emg_calibration(self, phase):
-        if self.emg_calibration_phase is not None:
-            return
-        if self.emg_mode_combo.currentData() != 'serial':
-            self.emg_calibration_status.setText('자동 보정은 실제 EMG 센서 모드에서 진행하세요.')
-            return
-        if phase == 'active' and self.emg_rest_samples is None:
-            self.emg_calibration_status.setText('먼저 1번 안정 상태 측정을 진행하세요.')
-            return
-        if self.emg_test_reader is None:
-            self.start_emg_test()
-        reader = self.emg_test_reader
-        if isinstance(reader, SerialEMGReader) and reader.board_name == 'ESP8266_A0':
-            if reader.firmware_version != 2 or reader.signal not in ('envelope', 'unfiltered'):
-                self.emg_calibration_status.setText('SZH-GJD001: 펌웨어 v2와 RMS 신호 종류를 선택한 뒤 보정하세요.')
-                return
-            if reader.signal == 'unfiltered' and not reader.bypass_available:
-                self.emg_calibration_status.setText('비교용 펌웨어가 필요합니다. NO BANDPASS 데이터 수신 후 보정하세요.')
-                return
-        if reader.serial is None or time.monotonic()-reader._last_sample >= .15:
-            self.emg_calibration_status.setText('Connect / Test EMG로 연결한 뒤 신호가 들어오면 다시 누르세요.')
-            return
-        if phase == 'rest':
-            self.emg_rest_samples = None
-        self.emg_calibration_phase = phase
-        self.emg_calibration_started = time.monotonic()
-        self.emg_calibration_samples = []
-        self.emg_contractions = [[], [], []]
-        self.emg_recoveries = [[], [], []]
-        self.emg_threshold_slider.setEnabled(False)
-        self.emg_calibration_status.setText('힘을 빼고 유지하세요.' if phase == 'rest' else '1/3: 먼저 힘을 빼세요. 화면 안내에 따라 힘빼기/수축을 반복합니다.')
-
-    def collect_emg_calibration(self, reader):
-        phase = self.emg_calibration_phase
-        if phase is None:
-            return
-        now = time.monotonic()
-        if reader.serial is None or now-reader._last_sample >= .15:
-            self.emg_calibration_phase = None
-            self.emg_rest_samples = None
-            self.emg_threshold_slider.setEnabled(True)
-            self.emg_calibration_status.setText('신호가 끊겨 보정을 취소했습니다. 안정 측정부터 다시 진행하세요.')
-            return
-        elapsed = now-self.emg_calibration_started
-        # Discard each transition; collect actual packets into three separate repetitions.
-        duration = 3.75 if phase == 'rest' else 12.0
-        if phase == 'rest':
-            if .75 <= elapsed < duration:
-                self.emg_calibration_samples.extend(reader.samples)
-            instruction = f'힘 빼기: {max(0,duration-elapsed):.1f}초'
-        else:
-            step = min(int(elapsed//2), 5)
-            within = elapsed-step*2
-            contraction = step%2 == 1
-            blocks = self.emg_contractions if contraction else self.emg_recoveries
-            if elapsed < duration and .5 <= within < 2:
-                blocks[step//2].extend(reader.samples)
-            instruction = f'{step//2+1}/3: '+('힘을 주세요' if contraction else '힘을 빼세요')+f' / {max(0,2-within):.1f}초'
-        self.emg_calibration_status.setText(instruction)
-        if elapsed < duration:
-            return
-        self.emg_calibration_phase = None
-        self.emg_threshold_slider.setEnabled(True)
-        samples = self.emg_calibration_samples
-        if phase == 'rest':
-            if not samples:
-                self.emg_calibration_status.setText('안정 측정값이 없습니다. 연결을 확인하고 다시 측정하세요.')
-                return
-            self.emg_rest_samples = samples
-            self.emg_calibration_status.setText(f'안정 측정 완료: 중앙값 {median(samples):.2f}. 2번을 누르고 안내에 따라 힘빼기/수축을 3회 반복하세요.')
-            return
-        try:
-            threshold, release = calibration_thresholds(self.emg_rest_samples, self.emg_contractions, self.emg_recoveries)
-        except ValueError as exc:
-            self.emg_calibration_status.setText(str(exc))
-            return
-        self.emg_threshold_slider.setValue(threshold)
-        self.emg_release_threshold = release
-        reader.set_thresholds(threshold, release)
-        repeats = '/'.join(f'{median(block):.2f}' for block in self.emg_contractions)
-        direction = '감소형' if reader.falling_activation else '증가형'
-        self.emg_calibration_status.setText(f'측정값 보정 적용 ({direction}): 초기 안정 {median(self.emg_rest_samples):.2f} / 수축 3회 {repeats} / ON {threshold:.3f} / OFF {release:.3f}. Save로 저장하세요.')
+    def update_backend_controls(self):
+        legacy = self.emg_backend_combo.currentData() == 'legacy'
+        self.emg_signal_combo.setEnabled(legacy)
+        self.emg_baud_combo.setEnabled(legacy)
 
     def clear_emg_release(self, *_args):
         self.emg_release_threshold = None
-        if isinstance(self.emg_test_reader, SerialEMGReader):
+        if isinstance(self.emg_test_reader, (SerialEMGReader, EMGLease)):
             self.emg_test_reader.set_thresholds(self.emg_threshold_slider.value())
 
     def emg_source_changed(self, *_args):
+        self.update_backend_controls()
         self.clear_emg_release()
         self.stop_emg_test()
 
@@ -412,6 +344,7 @@ class SettingsScreen(QWidget):
         if self.preview_source is not None: self.preview_source.release(); self.preview_source=None
 
     def start_camera_preview(self):
+        return  # Webcam input is disabled; hand input comes from Leap Motion.
         self.stop_camera_preview()
         settings=dict(self.settings, camera_enabled=self.camera_enabled_checkbox.isChecked(),
                       camera_index=self.camera_index_combo.currentData(),
@@ -458,6 +391,13 @@ class SettingsScreen(QWidget):
     def _set_camera_status(self, text):
         if self.camera_status.text()!=text: self.camera_status.setText(text)
 
+    def refresh_menu_camera_status(self):
+        source = getattr(self.main_window, '_navigation_video', None)
+        status = (source.status+'\n'+source.diagnostic_summary if source is not None
+                  else '메뉴 웹캠 꺼짐 / 변경 사항은 저장 후 적용됩니다.')
+        self._set_camera_status(status)
+        self.camera_status.setToolTip(status)
+
     def go_back(self):
         defer = getattr(self.main_window, '_defer_hand_navigation', None)
         if defer is not None and defer(self.go_back): return
@@ -468,12 +408,15 @@ class SettingsScreen(QWidget):
         super().showEvent(event)
         self.refresh_emg_devices()
         self.device_timer.start(2000)
+        self.menu_camera_timer.start(250)
 
     def hideEvent(self,event):
+        self.menu_camera_timer.stop()
         self.stop_emg_test(); self.device_timer.stop()
         self.stop_camera_preview(); super().hideEvent(event)
 
     def reset_defaults(self):
+        self.emg_backend_combo.setCurrentIndex(0)
         self.clear_emg_release()
         self.stop_emg_test()
         self.emg_mode_combo.setCurrentIndex(0)

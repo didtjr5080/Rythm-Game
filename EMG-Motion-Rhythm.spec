@@ -7,34 +7,23 @@ import os
 no_bandpass_build = os.environ.get('EMG_NO_BANDPASS_BUILD') == '1'
 bundle_name = 'EMG-Motion-Rhythm-No-Bandpass' if no_bandpass_build else 'EMG-Motion-Rhythm'
 comparison_datas = [('packaging/no_bandpass.marker', 'app')] if no_bandpass_build else []
+leap_sdk = Path(os.environ.get('LEAPSDK_INSTALL_LOCATION', 'C:/EMG-Motion-Rhythm/LeapSDK'))
+leap_datas = [(str(leap_sdk / 'include' / 'LeapC.h'), 'LeapSDK/include'),
+              (str(leap_sdk / 'lib' / 'x64' / 'LeapC.dll'), 'LeapSDK/lib/x64')]
 
 runtime_dir = Path(os.environ.get("SystemRoot", "C:/Windows")) / "System32"
 cpp_runtimes = [(str(runtime_dir/name), ".") for name in (
     "MSVCP140.dll", "MSVCP140_1.dll", "MSVCP140_2.dll", "CONCRT140.dll",
     "VCRUNTIME140.dll", "VCRUNTIME140_1.dll") if (runtime_dir/name).is_file()]
 
-mediapipe_datas = collect_data_files(
-    'mediapipe',
-    includes=[
-        'modules/hand_landmark/*',
-        'modules/palm_detection/*',
-    ],
-)
-mediapipe_binaries = collect_dynamic_libs('mediapipe')
-mediapipe_hiddenimports = [
-    'mediapipe',
-    'mediapipe.python._framework_bindings',
-    'mediapipe.python.solutions.hands',
-    'mediapipe.python.solutions.drawing_utils',
-    'mediapipe.python.solutions.drawing_styles',
-]
 
 a = Analysis(
     ['app\\main.py'],
     pathex=['legacy_web/backend'],
-    binaries=mediapipe_binaries + cpp_runtimes,
-    datas=[('app/data/songs/.gitkeep', 'app/data/songs'), ('app/assets', 'app/assets')] + mediapipe_datas + comparison_datas,
-    hiddenimports=mediapipe_hiddenimports + ['audio_analyzer', 'note_generator'],
+    binaries=cpp_runtimes,
+    datas=[('app/data/songs/.gitkeep', 'app/data/songs'), ('app/assets', 'app/assets'),
+           ('app/vendor/oymotion', 'oymotion')] + collect_data_files('mediapipe', includes=['modules/**']) + comparison_datas + leap_datas,
+    hiddenimports=['audio_analyzer', 'note_generator'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=['packaging/rthook_mediapipe.py'],

@@ -5,7 +5,6 @@ from PyQt6.QtWidgets import QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QV
 from app import config
 from app.input.camera import rgb_pixmap
 from app.input.input_fusion import InputFusion
-from app.input.live_video import open_live_video
 from app.settings import load_settings, save_settings
 from app.ui.theme import AuroraScreen, GlassPanel, draw_waveform
 from app.ui.dashboard import Instrument
@@ -22,10 +21,8 @@ class SignalPlot(QWidget):
 class CalibrationScreen(AuroraScreen):
     def __init__(self,main_window):
         super().__init__(); self.main_window=main_window; self.settings=load_settings()
-        self.camera_source=open_live_video(self.main_window,self.settings,enabled=config.USE_CAMERA)
-        self.fusion=InputFusion(use_camera=config.USE_CAMERA and self.settings['camera_enabled'],emg_threshold=self.settings['emg_threshold'],camera_flip=self.settings['camera_flip'],hand_tracker=self.camera_source if config.USE_CAMERA and self.settings['camera_enabled'] else None)
+        self.fusion=InputFusion(emg_threshold=self.settings['emg_threshold'], emg_session=getattr(main_window,'emg_session',None))
         self.reader=self.fusion.emg_reader
-        self.capture=self.camera_source.capture
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         outer=QVBoxLayout(self); outer.setContentsMargins(45,28,45,24)
         title=QLabel('LIVE BIO-CALIBRATION / SONIC LAB'); title.setObjectName('title'); title.setAlignment(Qt.AlignmentFlag.AlignCenter); outer.addWidget(title)
@@ -59,19 +56,19 @@ class CalibrationScreen(AuroraScreen):
         self.threshold_label.setText(f'SAVED THRESHOLD: {self.slider.value()}')
 
     def refresh(self):
-        frame=self.camera_source.read()
+        frame=None
         state,_=self.fusion.read(frame)
         self.plot.raw.append(self.fusion.raw_emg_value); self.plot.filtered.append(self.fusion.filtered_emg_value); self.plot.update()
-        self.value_label.setText(f'{state.emg_value:.0f} EMG')
+        self.value_label.setText(f'{state.emg_value:.2f} EMG ACTIVITY')
         self.state_label.setText(('MUSCLE ACTIVE / ' if state.emg_activated else 'RESTING / ')+getattr(self.reader,'status','MOCK EMG'))
         self.bio.camera_pixmap=rgb_pixmap(self.fusion.latest_frame_rgb)
-        self.bio.hand_diagnostic=f"FINGERS: {state.finger_count if state.finger_count is not None else '--'} / {state.hand_label or '--'} / {state.tracker_status or '--'}"
+        self.bio.hand_diagnostic=f"LEAP PINCH: {state.hand_label or '--'}"
         self.bio.finger_states=self.fusion.finger_states
         tracker=self.fusion.tracker
-        self.bio.tracker_warning=tracker.diagnostic_summary if tracker and not tracker.backend_is_mediapipe else ''
+        self.bio.tracker_warning=tracker.last_error or '' if tracker else ''
         self.bio.landmarks=self.fusion.hand_landmarks_norm
         mock=not hasattr(self.reader,'serial') or self.reader.serial is None
-        self.bio.sensor_status=self.camera_source.status+' / '+('TRACKED' if self.bio.landmarks else 'NO HAND')
+        self.bio.sensor_status=state.tracker_status or 'LEAP WAITING'
 
     def keyPressEvent(self,event):
         if event.key()==Qt.Key.Key_Space: self.fusion.set_space_pressed(True)
@@ -83,7 +80,6 @@ class CalibrationScreen(AuroraScreen):
         super().showEvent(event); self.setFocus()
     def stop(self):
         self.timer.stop(); self.fusion.close()
-        self.camera_source.release(); self.capture=None
     def go_back(self):
         self.stop(); self.main_window.show_start_screen()
     def closeEvent(self,event):

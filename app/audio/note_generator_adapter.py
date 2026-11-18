@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app import config
 from app.game.rhythm_game_engine import RhythmGameEngine
+from app.game.emg_chart import generate_emg_notes
 
 
 LEGACY_BACKEND = Path(__file__).resolve().parents[2] / "legacy_web" / "backend"
@@ -26,7 +27,20 @@ def find_saved_notes_for_song(song_path: str | Path | None) -> Path | None:
     if not song_path:
         return None
     path = notes_path_for_song(song_path)
-    return path if path.exists() else None
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+        if (payload.get('audio_signature') == audio_signature(song_path)
+                and payload.get('notes') and isinstance(payload.get('emg_notes'), list)):
+            return path
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    return None
+
+
+def audio_signature(song_path):
+    song = Path(song_path)
+    info = song.stat()
+    return {'filename':song.name, 'size':info.st_size, 'mtime_ns':info.st_mtime_ns}
 
 
 def chart_to_motion_notes(chart: dict) -> list[dict]:
@@ -56,11 +70,14 @@ def simplify_for_emg(notes: list[dict], min_interval_ms: int = config.MIN_NOTE_I
             continue
         if hit_time_ms - last_time < min_interval_ms:
             continue
+        lane = int(note.get("lane", 0)) % config.LANE_COUNT
+        if simplified and simplified[-1]["lane"] == 1 and lane == 2:
+            lane = 0  # Avoid the MIDDLE -> RING transition after timing simplification.
         occupied_buckets.add(bucket)
         simplified.append(
             {
                 "note_id": len(simplified),
-                "lane": int(note.get("lane", 0)) % config.LANE_COUNT,
+                "lane": lane,
                 "hit_time_ms": hit_time_ms,
             }
         )
@@ -77,18 +94,26 @@ def generate_notes_from_analysis(analysis: dict, difficulty: str = "normal") -> 
         if converted:
             return converted
     except Exception as exc:
+        if analysis.get('duration', 0) > 0:
+            raise RuntimeError(f'Song note generation failed: {exc}') from exc
         print(f"Legacy note generation failed: {exc}")
+    if analysis.get('duration', 0) > 0:
+        raise ValueError('No playable rhythm detected in the selected song. Generate Notes again or select another song.')
     return [
         {"note_id": note.note_id, "lane": note.lane, "hit_time_ms": note.hit_time_ms}
         for note in RhythmGameEngine.generate_sample_notes()
     ]
 
 
-def save_notes_json(notes: list[dict], output_dir: str | Path | None = None, song_path: str | Path | None = None) -> Path:
+def save_notes_json(notes: list[dict], output_dir: str | Path | None = None, song_path: str | Path | None = None, analysis=None) -> Path:
     target_dir = Path(output_dir) if output_dir is not None else notes_dir()
     target_dir.mkdir(parents=True, exist_ok=True)
-    path = notes_path_for_song(song_path) if song_path else target_dir / f"notes_{int(time.time())}.json"
+    path = target_dir / f'{Path(song_path).stem}_notes.json' if song_path else target_dir / f"notes_{int(time.time())}.json"
     notes = simplify_for_emg(notes)
     from app.atomic_io import atomic_text
-    atomic_text(path,json.dumps({"lane_count": config.LANE_COUNT, "notes": notes}, indent=2))
+    emg_notes = generate_emg_notes(notes, analysis)
+    atomic_text(path,json.dumps({'schema_version': 3, "lane_count": config.LANE_COUNT,
+                                'audio_signature':audio_signature(song_path) if song_path else None,
+                                'duration_seconds':(analysis or {}).get('duration',0),
+                                "notes": notes, 'emg_notes': emg_notes}, indent=2))
     return path

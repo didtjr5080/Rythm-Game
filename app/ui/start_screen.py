@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, QTimer
 from app.background import jobs
 from PyQt6.QtWidgets import (
     QFileDialog,
+    QMessageBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -60,6 +61,7 @@ class StartScreen(AuroraScreen):
         self.refresh_saved_songs()
         self.update_selected_panel()
         self.bio.video_session = getattr(self.main_window, "video_session", None)
+        self.bio.emg_session = getattr(self.main_window, 'emg_session', None)
         self.bio.start_live()
 
     @property
@@ -102,9 +104,8 @@ class StartScreen(AuroraScreen):
         self.performance=Instrument('performance'); cl.addWidget(self.performance,1)
         cl.addWidget(self.selected_title); self.selected_title.setMinimumHeight(0); cl.addWidget(self.selected_notes)
         self.selected_meta.setVisible(False)
-        right=GlassPanel('LIVE BIO-CALIBRATION'); rl=QVBoxLayout(right); rl.setContentsMargins(16,42,16,16)
+        right=GlassPanel('LIVE INPUT / AUTO REST'); rl=QVBoxLayout(right); rl.setContentsMargins(16,42,16,16)
         self.bio=Instrument('bio'); self.bio.threshold=load_settings()['emg_threshold']; rl.addWidget(self.bio,1)
-        calibrate=QPushButton('Input Calibration'); calibrate.clicked.connect(self.main_window.show_calibration_screen); rl.addWidget(calibrate)
         for panel in (left,center,right): row.addWidget(panel,1)
         outer.addLayout(row,1); outer.addWidget(self._bottom_bar())
         self.status.setMaximumHeight(45); outer.addWidget(self.status)
@@ -196,7 +197,7 @@ class StartScreen(AuroraScreen):
         start_game.setObjectName("primary")
         generate_notes.clicked.connect(self.generate_notes)
         settings.clicked.connect(self.main_window.show_settings_screen)
-        start_game.clicked.connect(self.main_window.show_game_widget)
+        start_game.clicked.connect(self.main_window.show_game_selection)
         view_results.clicked.connect(self.main_window.show_results_browser_screen)
         for button in (generate_notes, settings, start_game, view_results):
             button.setMinimumHeight(44)
@@ -237,7 +238,7 @@ class StartScreen(AuroraScreen):
     def save_song_file(self, source_path: str) -> Path:
         source = Path(source_path)
         safe_stem = "".join(char if char.isalnum() or char in ("-", "_") else "_" for char in source.stem)
-        target = self.songs_dir / f"{safe_stem}_{int(time.time())}{source.suffix.lower()}"
+        target = self.songs_dir / f"{safe_stem}_{time.time_ns()}{source.suffix.lower()}"
         shutil.copy2(source, target)
         return target
 
@@ -250,8 +251,7 @@ class StartScreen(AuroraScreen):
     def preview_song_item(self, item: QListWidgetItem | None):
         if item is None:
             return
-        path = Path(item.data(Qt.ItemDataRole.UserRole))
-        self.update_selected_panel(path)
+        self.load_saved_song_item(item)
 
     def load_selected_saved_song(self):
         item = self.song_list.currentItem()
@@ -286,16 +286,17 @@ class StartScreen(AuroraScreen):
                     pass
             self.selected_title.setText(self.display_song_title(selected))
             self.selected_meta.setText(f"{selected.suffix.upper()[1:]}  |  {selected}")
-            self.selected_notes.setText(f"NOTES  {'READY' if notes_path else 'MISSING'}")
+            self.selected_notes.setText('NOTES  PINCH + EMG READY' if notes_path else 'NOTES  MISSING')
             self.selected_notes.setProperty("ready", bool(notes_path))
             self.selected_notes.style().unpolish(self.selected_notes)
             self.selected_notes.style().polish(self.selected_notes)
         else:
             self.selected_title.setText("Sample Chart")
             self.selected_meta.setText("No song selected")
-            self.selected_notes.setText("NOTES  SAMPLE")
+            self.selected_notes.setText("NOTES  PINCH + EMG SAMPLES")
 
-    def generate_notes(self):
+    def generate_notes(self, on_ready=None):
+        if callable(on_ready): self._after_generation = on_ready
         if self._generation is not None:
             self._log('Note generation is already running.')
             return
@@ -304,11 +305,11 @@ class StartScreen(AuroraScreen):
             analysis = analyze_audio_file(song) if song else {}
             if song: analysis['file_id'] = Path(song).stem
             notes = generate_notes_from_analysis(analysis)
-            path = save_notes_json(notes, song_path=song)
+            path = save_notes_json(notes, song_path=song, analysis=analysis)
             return analysis, path
         self._generation = (song, jobs.submit(prepare))
         self._generation_timer.start(50)
-        self._log('Analyzing audio / generating notes... You can continue using the menu.')
+        self._log('Analyzing audio / generating PINCH + EMG charts (including hold notes)...')
 
     def _poll_generation(self):
         song, future = self._generation
@@ -319,9 +320,18 @@ class StartScreen(AuroraScreen):
             analysis, path = future.result()
         except Exception as exc:
             self._log(f'Note generation failed: {exc}. Select the song and retry.')
+            if getattr(self, '_after_generation', None) is not None:
+                self._after_generation = None
+                QMessageBox.warning(self, '음악 준비 실패', str(exc))
             return
         # Completion belongs to this page and this exact selection only.
-        if self.main_window.centralWidget() is not self or self.main_window.selected_song_path != song:
+        if self.main_window.centralWidget() is not self:
+            self._after_generation = None
+            return
+        if self.main_window.selected_song_path != song:
+            callback = getattr(self, '_after_generation', None)
+            self._after_generation = None
+            if callback is not None: self.generate_notes(on_ready=callback)
             return
         if not hasattr(self.main_window, 'song_analyses'): self.main_window.song_analyses = {}
         self.main_window.song_analyses[song] = analysis
@@ -329,7 +339,10 @@ class StartScreen(AuroraScreen):
         self.refresh_saved_songs()
         self.update_selected_panel()
         self.song_instrument.update()
-        self._log(f'Generated and saved notes: {path}')
+        self._log(f'Generated and saved both PINCH and EMG charts: {path}')
+        callback = getattr(self, '_after_generation', None)
+        self._after_generation = None
+        if callback is not None: callback()
 
     def view_results(self):
         result_dir = Path(__file__).resolve().parents[1] / "data" / "results"

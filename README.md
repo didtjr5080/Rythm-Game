@@ -1,6 +1,46 @@
 # EMG Motion Rhythm
 
+EXTRACTED: 2026-11-18 전체 구현 소스에는 Leap 전용 4레인 핀치, OYMotion USB armband 근전도 모드, 공유 EMG 세션, 메뉴 전용 MediaPipe 커서와 게임 선택 이미지가 포함됩니다. 아래 EXE 기록과 현재 소스 검증은 구분합니다. 소스 검사 75개 통과; 음악 분석/재생 길이 차이와 전체 곡 검사 오류, 실제 장치 검증은 [다음 과제](docs/NEXT_TASKS.md)에 남아 있습니다. 이번 소스 공유에서는 새 EXE를 빌드하지 않았습니다. Leap SDK는 별도 설치 후 `LEAPSDK_INSTALL_LOCATION`으로 지정하며 기본 경로는 `C:/EMG-Motion-Rhythm/LeapSDK`입니다. OYMotion 필수 DLL과 배포 고지는 `app/vendor/oymotion/`에 포함됩니다.
+
+EXTRACTED: 최신 버전은 메인·게임 선택·설정·결과에서 웹캠 MediaPipe 손 커서를 사용하고, 게임 시작 전 카메라·손 추론 종료를 확인합니다. 게임은 핀치 Leap 전용 / 근전도 armband 전용입니다. 최신 EXE: `dist_windows_menu_hand_cursor_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. [메뉴 손 커서 안내·실제 카메라 검증 제한](docs/menu-hand-cursor.md). 아래 웹캠 비활성 설명은 이전 기록입니다.
+
+EXTRACTED: 최신 게임 선택 화면은 제공받은 이미지와 게임 이름만 표시합니다. 암밴드 이미지는 근전도 게임, 핀치 손 이미지는 핀치 게임입니다. 최신 EXE: `dist_windows_image_selection_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. [화면 안내·미리보기](docs/game-selection-images.md). 아래 배포 경로는 이전 기록입니다.
+
+EXTRACTED: 최신 핀치는 **Leap Motion만 사용**합니다. armband 보정·가중 합산·단독 핀치 테스트를 제거했으며 별도 근전도 게임은 유지합니다. 최신 EXE: `dist_windows_pinch_leap_only_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. [현재 입력 안내](docs/pinch-leap-only.md). 아래 가중치·armband 핀치 설명은 이전 버전 기록입니다.
+
+EXTRACTED: 최신 일반 핀치는 **Leap 70% + EMG 30% 인식 점수**를 합산합니다. EMG 패턴 유사성만으로 일반 모드 보정을 막지 않으며, armband 단독 테스트는 기존 구분 검사를 유지합니다. 최신 EXE: `dist_windows_weighted_pinch_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. [가중 판정 안내](docs/weighted-pinch.md). 아래 배포 경로와 두 센서 일치 필수 설명은 이전 기록입니다.
+
+EXTRACTED: USB 초기화 실패 후 재연결을 수정한 최신 빌드: `dist_windows_armband_reconnect_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. 새 폴더의 포트는 Auto입니다. [현재 USB 장치 상태와 재연결 안내](docs/armband-reconnect.md). 실제 동글 인식 복구는 아직 확인하지 못했습니다.
+
+EXTRACTED: 테스트 시 게임 선택의 **armband만 사용 (Leap 불필요)**를 체크하면 armband로만 다섯 자세를 보정하고 핀치 4레인을 플레이할 수 있습니다. 최신 EXE: `dist_windows_armband_only_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. [테스트 사용법](docs/armband-only-test.md). 체크하지 않으면 아래의 두 센서 일치 규칙을 사용합니다.
+
+EXTRACTED: 최신 핀치 게임은 **Leap + OYMotion armband의 핀치가 일치해야 입력**됩니다. 시작 전 열린 손과 네 핀치를 두 센서로 보정합니다. 최신 빌드: `dist_windows_pinch_armband_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. [보정·판정 안내](docs/pinch-armband-intent.md). 아래 배포 기록과 EMG 불필요 설명은 이전 버전 기준입니다.
+
+EXTRACTED: 핀치 보정은 설정 대신 매 게임 시작 직전에 진행합니다. 다섯 동작을 새로 측정하고 저장한 후 시작하며 재시도에도 적용됩니다. 최신 빌드는 `dist_windows_pre_game_calibration_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. [시작 전 보정 안내](docs/pre-game-calibration.md). 아래 배포 경로는 이전 기록입니다.
+
+EXTRACTED: OYMotion USB 8-channel, 12bit, 500Hz build: `dist_windows_oymotion_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`. See [all-channel EMG input and verification](docs/oymotion-emg.md). Older build paths below are historical.
+
+EXTRACTED: 최신 소스는 **게임 선택 → 근전도 리듬·유지(1레인) / 핀치 리듬(4레인)**을 지원합니다. 노트 생성 한 번으로 두 모드 채보를 함께 저장합니다. 근전도 모드에는 박자 수축과 긴 근활성 유지 노트가 있고, 핀치 모드는 기준선에서 해당 핀치를 유지하면 득점합니다. 웹캠·MediaPipe 입력은 사용하지 않습니다. [최신 두 모드 안내](docs/game-modes.md)를 우선 확인하세요. 아래 과거 빌드·입력 안내는 이전 버전 기록입니다.
+
 ## 최신 로컬 Windows 버전
+
+EXTRACTED: Leap 핀치 모드의 연속 MISS 10회 종료를 적용한 최신 EXE는 `dist_windows_leap_miss10_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. 근전도 작업은 보류하고 해당 모드는 변경하지 않았습니다. [종료 규칙](docs/leap-miss-limit.md). 아래 경로는 이전 기록입니다.
+
+EXTRACTED: 최신 실행 파일은 `dist_windows_emg_rest_001_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. 근전도 게임 선택 후 3초간 가만히 있으면 시작하며 **안정 기준+0.01부터 활성**으로 인정합니다. 수동 근전도 보정은 사용하지 않습니다. [사용법](docs/emg-rest-baseline.md). 아래 실행 경로는 이전 기록입니다.
+
+EXTRACTED: 최신 근전도 모드는 수동 보정 없이 게임 시작 전 **3초 안정값 측정 → 안정값보다 0.01 이상 높으면 입력** 규칙을 사용합니다. 측정 중 음악과 노트는 시작하지 않습니다. [현재 입력 안내](docs/emg-rest-baseline.md). 아래 ON/OFF·수동 보정 설명은 이전 기록입니다.
+
+EXTRACTED: 보정·게임의 EMG 연결/필터 공유와 넓어진 입력 범위를 적용한 최신 EXE는 `dist_windows_emg_assisted_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. EMG 박자 ±350ms, 유지 중 400ms 이내 활성 회복을 허용합니다. 약한 수축용 새 ON/OFF 기준은 자동 보정을 다시 하면 적용되며 성공값은 자동 저장됩니다. [사용법·검증](docs/emg-assisted-input.md). 아래 경로는 이전 빌드 기록입니다.
+
+EXTRACTED: 두 게임 모드를 지원하는 최신 EXE는 `dist_windows_dual_mode_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. **노트 생성 → 게임 선택 → 근전도 또는 핀치** 순서로 이용합니다. 기존 설정·개인별 보정값을 새 폴더에 복사했습니다. [두 모드 사용법](docs/game-modes.md). 아래 경로는 이전 빌드 기록입니다.
+
+EXTRACTED: EMG 없이 핀치 유지로 판정하는 최신 EXE는 `dist_windows_leap_pinch_hold_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. 이전 개인별 보정 파일을 검증 후 새 폴더에 복사했습니다. [판정·사용 안내](docs/pinch-hold-scoring.md). 아래 경로는 이전 빌드 기록입니다.
+
+EXTRACTED: 연속 핀치 즉시 전환을 반영한 최신 EXE는 `dist_windows_leap_direct_pinch_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. 명확한 새 핀치는 손을 펼치지 않고 전환합니다. 이전 개인별 보정 빌드의 보정 파일을 검증 후 새 실행 폴더에 복사했습니다. [상세](docs/leap-personal-calibration.md#손을-펼치지-않는-연속-핀치-전환). 아래 경로는 이전 빌드 기록입니다.
+
+EXTRACTED: 개인별 보정을 포함한 최신 EXE는 `dist_windows_leap_personal_calibration_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. Settings의 **Leap Motion 개인별 핀치 보정**에서 열린 손과 네 핀치를 측정·저장합니다. [사용법](docs/leap-personal-calibration.md). 아래 경로는 이전 빌드 기록입니다.
+
+EXTRACTED: 샘플 게임 레인 제약 재점검 빌드는 `dist_windows_leap_sample_fix_2026.11.18/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`입니다. 노래 없이 시작하는 게임과 기존 채보 로딩에도 MIDDLE → RING 금지 제약을 적용합니다. 아래 `dist_windows_current` 경로는 이전 배포 기록입니다.
 
 EXTRACTED: 현재 로컬 실행 파일은 `dist_windows_current/EMG-Motion-Rhythm-No-Bandpass/EMG-Motion-Rhythm-No-Bandpass.exe`, 배포 ZIP은 `release/EMG-Motion-Rhythm-windows-x64-2026.11.17.11.zip`입니다. [두 손가락 손목 기울기 스크롤](docs/hand-cursor.md)과 [버전 정리·백업 위치](docs/version-cleanup.md)를 참고하세요. 근전도 처리·보정은 유지했습니다.
 

@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMainWindow, QMessageBox
+from PyQt6.QtWidgets import QDialog, QMainWindow, QMessageBox
 import logging
 
 from app import config
@@ -11,17 +11,22 @@ from app.ui.result_screen import ResultScreen
 from app.ui.results_browser_screen import ResultsBrowserScreen
 from app.ui.settings_screen import SettingsScreen
 from app.ui.start_screen import StartScreen
+from app.ui.game_selection_screen import GameSelectionScreen
 from app.ui.hand_cursor import HandCursorController
+from app.ui.leap_calibration_dialog import LeapCalibrationDialog
 from app.input.video_session import VideoSession
+from app.input.emg_session import EMGSession
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.video_session = VideoSession(self)
+        self.emg_session = EMGSession(self)
         self._navigation_video = None
         self.selected_song_path: str | None = None
         self.notes_path: str | None = None
+        self.game_mode = 'pinch'
         self.setWindowTitle(config.PROJECT_NAME)
         self.apply_window_settings()
         self.hand_cursor = HandCursorController(self)
@@ -34,14 +39,16 @@ class MainWindow(QMainWindow):
             self._navigation_video = None
         super().setCentralWidget(widget)
         if not hasattr(self, 'hand_cursor'): return
-        if isinstance(widget, StartScreen):
-            self.hand_cursor.attach(widget, lambda: getattr(widget.bio, 'camera_source', None))
-        elif isinstance(widget, SettingsScreen):
-            widget.start_camera_preview()
-            self.hand_cursor.attach(widget, lambda: widget.preview_source)
-        elif isinstance(widget, (ResultScreen, ResultsBrowserScreen)):
-            self._navigation_video = self.video_session.acquire(load_settings(), enabled=config.USE_CAMERA)
-            self.hand_cursor.attach(widget, lambda: self._navigation_video)
+        self._attach_navigation_camera()
+
+    def _attach_navigation_camera(self):
+        screen = self.centralWidget()
+        if not isinstance(screen, (StartScreen, GameSelectionScreen, SettingsScreen, ResultScreen, ResultsBrowserScreen)):
+            return
+        settings = load_settings()
+        if config.USE_CAMERA and settings['camera_enabled']:
+            self._navigation_video = self.video_session.acquire(settings, enabled=True)
+            self.hand_cursor.attach(screen, lambda: self._navigation_video)
 
     def apply_window_settings(self):
         was_active = self.isActiveWindow()
@@ -68,6 +75,8 @@ class MainWindow(QMainWindow):
         logging.getLogger(__name__).info('Display requested=%s actual=%sx%s available=%sx%s dpr=%s state=%s',display,self.width(),self.height(),available.width(),available.height(),self.devicePixelRatioF(),self.windowState())
 
     def _release_current_inputs(self):
+        if hasattr(self, 'hand_cursor'):
+            self.hand_cursor.detach()
         if self._navigation_video is not None:
             self._navigation_video.close()
             self._navigation_video = None
@@ -85,6 +94,7 @@ class MainWindow(QMainWindow):
         current=self.centralWidget()
         if isinstance(current,GameWidget): current.close()
         self.video_session.shutdown()
+        self.emg_session.shutdown()
         super().closeEvent(event)
 
     def show_start_screen(self):
@@ -93,9 +103,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(StartScreen(self))
 
     def show_calibration_screen(self):
-        if self._defer_hand_navigation(self.show_calibration_screen): return
-        self._release_current_inputs()
-        self.setCentralWidget(CalibrationScreen(self))
+        self.show_settings_screen()
 
     def show_settings_screen(self):
         if self._defer_hand_navigation(self.show_settings_screen): return
@@ -107,21 +115,60 @@ class MainWindow(QMainWindow):
         self._release_current_inputs()
         self.setCentralWidget(ResultsBrowserScreen(self))
 
-    def show_game_widget(self):
-        if self._defer_hand_navigation(self.show_game_widget): return
+    def show_game_selection(self):
+        if self._defer_hand_navigation(self.show_game_selection): return
+        if self.selected_song_path and not self._ensure_song_notes(self.show_game_selection): return
         self._release_current_inputs()
-        if self.selected_song_path and not self.notes_path:
-            saved_notes = find_saved_notes_for_song(self.selected_song_path)
-            if saved_notes:
-                self.notes_path = str(saved_notes)
+        self.setCentralWidget(GameSelectionScreen(self))
+
+    def _ensure_song_notes(self, on_ready):
+        saved = find_saved_notes_for_song(self.selected_song_path)
+        self.notes_path = str(saved) if saved else None
+        if saved is not None:
+            return True
+        if not isinstance(self.centralWidget(), StartScreen):
+            self.show_start_screen()
+        self.centralWidget().generate_notes(on_ready=on_ready)
+        return False
+
+    def show_game_widget(self, game_mode=None):
+        mode = self.game_mode if game_mode is None else game_mode
+        if mode not in ('pinch', 'emg'):
+            raise ValueError('Unknown game mode.')
+        if self._defer_hand_navigation(lambda: self.show_game_widget(mode)): return
+        if self.selected_song_path and not self._ensure_song_notes(lambda: self.show_game_widget(mode)): return
+        self._release_current_inputs()
         if self.notes_path:
             from app.game.rhythm_game_engine import RhythmGameEngine
-            try: RhythmGameEngine.from_json_file(self.notes_path)
+            try: RhythmGameEngine.from_json_file(self.notes_path, mode=mode)
             except (OSError, ValueError, TypeError, AttributeError, OverflowError) as exc:
                 self.show_start_screen()
                 QMessageBox.warning(self,'Chart unavailable',f'{exc}\nGenerate Notes again, then retry.')
                 return
-        self.setCentralWidget(GameWidget(self, notes_path=self.notes_path, song_path=self.selected_song_path))
+        video = getattr(self, 'video_session', None)
+        if video is not None:
+            video.stop()
+            if not video.is_stopped:
+                ticket = self._pending_game_start = object()
+                screen = self.centralWidget()
+                def retry_after_camera_close():
+                    if (getattr(self, '_pending_game_start', None) is ticket
+                            and self.centralWidget() is screen and self.isVisible()):
+                        self.show_game_widget(mode)
+                QTimer.singleShot(30, retry_after_camera_close)
+                return
+        self._pending_game_start = None
+        if mode == 'pinch':
+            dialog = LeapCalibrationDialog(self)
+            try:
+                if dialog.exec() != QDialog.DialogCode.Accepted:
+                    self._attach_navigation_camera()
+                    return
+            finally:
+                dialog.deleteLater()
+        self.game_mode = mode
+        self.setCentralWidget(GameWidget(self, notes_path=self.notes_path, song_path=self.selected_song_path,
+                                        mode=mode))
 
     def _defer_hand_navigation(self, callback):
         cursor = getattr(self, 'hand_cursor', None)

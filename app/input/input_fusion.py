@@ -3,8 +3,9 @@ from dataclasses import dataclass
 
 from app import config
 from app.input.emg_reader import SerialEMGReader
-from app.input.mediapipe_tracker import MediaPipeHandTracker
+from app.input.leap_tracker import LeapPinchTracker
 from app.input.mock_emg_reader import MockEMGReader
+from app.input.emg_factory import create_emg_reader
 
 
 @dataclass
@@ -20,6 +21,8 @@ class GameInputState:
     tracker_status: str | None = None
     hand_label: str | None = None
     tracker_error: str | None = None
+    emg_signal_fresh: bool = True
+    pinch_input_source: str | None = None
 
 
 class InputFusion:
@@ -31,16 +34,23 @@ class InputFusion:
         camera_flip: bool = config.CAMERA_FLIP,
         hand_tracker=None,
         produce_rgb=True,
+        use_emg=True,
+        use_leap=True,
+        emg_session=None,
     ):
-        self.tracker = hand_tracker if hand_tracker is not None else (MediaPipeHandTracker(flip=camera_flip) if use_camera else None)
+        self.tracker = hand_tracker if hand_tracker is not None else LeapPinchTracker() if use_leap else None
         from app.settings import load_settings
         settings = load_settings()
         if use_mock_emg is None:
             use_mock_emg = config.USE_MOCK_EMG or settings['emg_input_mode'] == 'mock'
-        self.emg_reader = MockEMGReader(emg_threshold) if use_mock_emg else SerialEMGReader(
-            port=settings['emg_port'], baudrate=settings['emg_baudrate'], threshold=emg_threshold,
-            device_id=settings['emg_device_id'], signal=settings['emg_signal'],
-            release_threshold=settings['emg_release_threshold'])
+        if not use_emg:
+            self.emg_reader = None
+        elif emg_session is not None:
+            self.emg_reader = emg_session.acquire(dict(settings, emg_threshold=emg_threshold), use_mock_emg)
+        elif use_mock_emg:
+            self.emg_reader = MockEMGReader(emg_threshold)
+        else:
+            self.emg_reader = create_emg_reader(settings, threshold=emg_threshold)
         self.last_camera_frame = None
         self.produce_rgb = produce_rgb
         self.latest_frame_rgb = None
@@ -73,11 +83,16 @@ class InputFusion:
             except Exception as exc:
                 print(f"Input hand tracking failed: {exc}")
         try:
-            emg_value, emg_activated = self.emg_reader.read()
+            emg_value, emg_activated = self.emg_reader.read() if self.emg_reader is not None else (0.0, False)
         except Exception as exc:
             print(f"EMG input failed: {exc}")
             emg_value, emg_activated = 0.0, False
 
+        fresh = self.emg_reader is not None
+        if hasattr(self.emg_reader, 'signal_fresh'):
+            fresh = self.emg_reader.signal_fresh
+        elif hasattr(self.emg_reader, '_last_sample'):
+            fresh = self.emg_reader.serial is not None and time.monotonic()-self.emg_reader._last_sample < .15
         state = GameInputState(
             lane=hand.get("lane"),
             emg_value=float(emg_value),
@@ -90,6 +105,7 @@ class InputFusion:
             tracker_status=getattr(self.tracker, "status", None),
             hand_label=hand.get("hand_label"),
             tracker_error=getattr(self.tracker, "last_error", None),
+            emg_signal_fresh=bool(fresh),
         )
         self.last_camera_frame = hand.get("frame")
         self.current_lane = state.lane

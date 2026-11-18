@@ -13,15 +13,5 @@ def analyze_audio_file(file_path: str) -> dict:
 
         return analyze_audio(file_path)
     except Exception as exc:
-        print(f"Audio analysis failed: {exc}")
-        return {
-            "duration": 0.0,
-            "sample_rate": 0,
-            "bpm": 120.0,
-            "beats": [],
-            "onsets": [],
-            "onset_strengths": [],
-            "energy_times": [],
-            "energy": [],
-        }
+        raise RuntimeError(f'Audio analysis failed: {exc}') from exc
 
